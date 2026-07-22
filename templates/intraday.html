@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SK-XN信号">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<title>SK→XN 实时联动信号</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b1120;color:#e2e8f0;padding:0;min-height:100dvh;overflow-x:hidden}
+.top{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#1e293b;border-bottom:1px solid #334155}
+.top .t{font-size:15px;font-weight:700;color:#f1f5f9;letter-spacing:0.5px}
+.top .ts{font-family:monospace;font-size:10px;color:#64748b}
+@keyframes pulse{0%{opacity:1}50%{opacity:0.6}100%{opacity:1}}
+@keyframes flash-green{0%{background:rgba(34,197,94,0.3)}100%{background:transparent}}
+@keyframes flash-red{0%{background:rgba(239,68,68,0.3)}100%{background:transparent}}
+.hero{padding:24px 16px 18px;text-align:center;transition:all 0.4s;position:relative;overflow:hidden}
+.hero.buy{background:linear-gradient(180deg,#064e3b60,#0b1120)}
+.hero.sell{background:linear-gradient(180deg,#7f1d1d60,#0b1120)}
+.hero.hold{background:linear-gradient(180deg,#1e3a5f40,#0b1120)}
+.hero .sig{font-size:56px;font-weight:900;letter-spacing:3px;line-height:1;transition:color 0.3s}
+.hero .sub{font-size:13px;margin-top:6px;color:#94a3b8}
+.hero .conf{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.hero .dot{width:22px;height:5px;border-radius:3px;background:#334155;transition:all 0.3s}
+.hero .dot.on{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.5)}
+.hero .dot.on2{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,0.5)}
+.hero .dot.on3{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.5)}
+.pr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 12px}
+.prc{background:#1e293b;border-radius:12px;padding:14px;position:relative;border:1px solid #334155}
+.prc .l{font-size:10px;color:#64748b;display:flex;justify-content:space-between}
+.prc .p{font-size:28px;font-weight:800;margin:2px 0}
+.prc .c{font-size:14px;font-weight:600}
+.prc .s{font-size:9px;color:#475569;margin-top:2px}
+.prc .flag{position:absolute;top:8px;right:10px;font-size:18px}
+.chart-box{background:#1e293b;border-radius:12px;margin:6px 12px;padding:12px;border:1px solid #334155}
+.chart-box .ct{font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600;display:flex;justify-content:space-between}
+.chart{height:180px;width:100%}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 12px}
+.g2>div{background:#1e293b;border-radius:10px;padding:10px;border:1px solid #334155}
+.g2 .l{font-size:9px;color:#64748b}
+.g2 .v{font-size:18px;font-weight:700;margin-top:2px}
+.sig-hist{display:flex;gap:3px;padding:10px 12px;overflow-x:auto;margin:4px 12px}
+.sig-hist .sh-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;opacity:0.7}
+.sig-hist .sh-dot.b{background:#22c55e}
+.sig-hist .sh-dot.s{background:#ef4444}
+.sig-hist .sh-dot.h{background:#475569}
+.bt-panel{background:#1e293b;border-radius:12px;margin:8px 12px;padding:14px;border:1px solid #334155}
+.bt-panel .t{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+.bt-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bt-item{text-align:center;background:#0b1120;border-radius:8px;padding:8px}
+.bt-item .l{font-size:8px;color:#64748b}
+.bt-item .v{font-size:14px;font-weight:700}
+.rule-box{background:#1e293b;border-radius:12px;margin:8px 12px 24px;padding:14px;font-size:12px;color:#94a3b8;line-height:1.9;border:1px solid #334155}
+.rule-box strong{color:#e2e8f0}
+.green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}.blue{color:#3b82f6}.purple{color:#a855f7}
+::-webkit-scrollbar{height:2px;width:2px}
+::-webkit-scrollbar-track{background:#0b1120}
+::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="top">
+<div class="t">⚡ SK→XN 实时联动</div>
+<div class="ts" id="timeDisplay">--:--:--</div>
+</div>
+
+<div id="hero" class="hero hold">
+<div class="sig orange" id="mainSig">◆</div>
+<div class="sub" id="subSig">等待SK数据...</div>
+<div class="conf" id="confBar">
+<div class="dot"></div><div class="dot"></div><div class="dot"></div>
+</div>
+</div>
+
+<div class="pr">
+<div class="prc">
+<div class="l"><span>🇰🇷 SK Hynix</span><span id="skDataPts" style="color:#475569"></span></div>
+<div class="flag" id="skFlag">⚪</div>
+<div class="p blue" id="skPrice">--</div>
+<div class="c" id="skChange">--</div>
+<div class="s" id="skSub">--</div>
+</div>
+<div class="prc">
+<div class="l"><span>🇨🇳 香农芯创</span><span style="color:#475569">实时</span></div>
+<div class="flag" id="xnFlag">⚪</div>
+<div class="p blue" id="xnPrice">--</div>
+<div class="c" id="xnChange">--</div>
+<div class="s" id="xnSub">--</div>
+</div>
+</div>
+
+<div class="g2">
+<div><div class="l">📊 成交量比</div><div class="v" id="volRatio">--</div></div>
+<div><div class="l">📈 5分动量</div><div class="v" id="momDisplay">--</div></div>
+<div><div class="l">🔵 15分动量</div><div class="v" id="mom15Display">--</div></div>
+<div><div class="l">🔴 30分动量</div><div class="v" id="mom30Display">--</div></div>
+</div>
+
+<div class="chart-box">
+<div class="ct"><span>📈 SK海力士 1分K线</span><span style="color:#475569;font-weight:400" id="chartInfo">实时</span></div>
+<div id="priceChart" class="chart"></div>
+</div>
+
+<div class="chart-box">
+<div class="ct"><span>📊 成交量 (最后30分钟)</span><span id="volSurgeLabel" style="color:#475569;font-weight:400">均量线: --</span></div>
+<div id="volChart" class="chart"></div>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 12px">
+<span style="font-size:11px;color:#94a3b8;font-weight:600">⏱ 信号历史</span>
+<span style="font-size:9px;color:#475569">绿色=做多 红色=做空 灰色=观望</span>
+</div>
+<div class="sig-hist" id="sigHist"></div>
+
+<div class="bt-panel">
+<div class="t">📋 信号历史记录 · 实时持久化 <span style="font-weight:400;color:#475569;font-size:9px" id="histCount">--</span></div>
+<div style="max-height:180px;overflow-y:auto" id="sigHistoryTable">
+<div style="color:#475569;text-align:center;padding:12px;font-size:11px">加载中...</div>
+</div>
+</div>
+
+<div class="bt-panel">
+<div class="t">📋 回测 · SK→香农方向准确率</div>
+<div class="bt-g">
+<div class="bt-item"><div class="l">日线(2%)胜率</div><div class="v green" id="btWin">--</div></div>
+<div class="bt-item"><div class="l">交易笔数</div><div class="v blue" id="btN">--</div></div>
+<div class="bt-item"><div class="l">夏普比</div><div class="v orange" id="btSharpe">--</div></div>
+<div class="bt-item"><div class="l">最大回撤</div><div class="v red" id="btDD">--</div></div>
+</div>
+<div style="font-size:9px;color:#475569;text-align:center;margin-top:6px" id="btPeriod">--</div>
+</div>
+
+<div class="bt-panel">
+<div class="t">📋 日内5分回测 · SK领先1根K线</div>
+<div class="bt-g">
+<div class="bt-item"><div class="l">方向准确率</div><div class="v green" id="idWin">--</div></div>
+<div class="bt-item"><div class="l">交易笔数</div><div class="v blue" id="idN">--</div></div>
+<div class="bt-item"><div class="l">累计收益</div><div class="v orange" id="idCum">--</div></div>
+<div class="bt-item"><div class="l">最大回撤</div><div class="v red" id="idDD">--</div></div>
+</div>
+<div style="font-size:9px;color:#475569;text-align:center;margin-top:6px" id="idPeriod">--</div>
+</div>
+
+<div class="rule-box">
+<strong>⚡ 超短线规则</strong><br>
+• <span class="green">做多</span>: SK 5分涨 &gt;1.5% + 量 &gt;1.5x均值 → 买入香农, 持有5分<br>
+• <span class="red">做空</span>: SK 5分跌 &lt;-1.5% + 量 &gt;1.5x均值 → 卖出香农, 持有5分<br>
+• <span class="red">止损</span>: -2% &nbsp;·&nbsp; <span class="orange">仓位</span>: &lt;10%/笔 &nbsp;·&nbsp; <span class="purple">盘前信号</span>: 韩国8:00-9:30预判A股
+</div>
+
+<script>
+let prevSig = 'hold', sigHistory = []
+let priceChart = null, volChart = null
+
+function initCharts() {
+priceChart = echarts.init(document.getElementById('priceChart'))
+priceChart.setOption({
+tooltip:{trigger:'axis',formatter:function(ps){let p=ps[0];return p.axisValue+'<br/>SK: '+p.value.toLocaleString()}},
+grid:{left:'4%',right:'4%',top:'6%',bottom:'10%'},
+xAxis:{type:'category',data:[],axisLabel:{color:'#475569',fontSize:8,show:false}},
+yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:9}},
+series:[{type:'line',data:[],smooth:true,lineStyle:{color:'#3b82f6',width:2},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(59,130,246,0.2)'},{offset:1,color:'rgba(59,130,246,0)'}]}},markLine:{silent:true,data:[{yAxis:0,label:{show:false}}]}}]
+})
+
+volChart = echarts.init(document.getElementById('volChart'))
+volChart.setOption({
+tooltip:{trigger:'axis',formatter:function(ps){let p=ps[0];return p.axisValue+'<br/>量: '+(p.value||0).toLocaleString()}},
+grid:{left:'4%',right:'4%',top:'6%',bottom:'10%'},
+xAxis:{type:'category',data:[],axisLabel:{color:'#475569',fontSize:8,show:false}},
+yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:8}},
+series:[{type:'bar',data:[],barWidth:'70%'}]
+})
+
+window.addEventListener('resize',()=>{priceChart.resize();volChart.resize()})
+}
+
+function updateSignal(sig) {
+const hero=document.getElementById('hero'), main=document.getElementById('mainSig')
+const sub=document.getElementById('subSig'), conf=document.getElementById('confBar')
+const dir=sig.signal||'hold', confLevel=sig.confidence||'low'
+const dots=conf.querySelectorAll('.dot')
+let n=confLevel==='high'?3:confLevel==='medium'?2:1
+let sigChar,sigColor,cls
+if(dir==='buy'){sigChar='▲ 做多';sigColor='#22c55e';cls='buy'}
+else if(dir==='sell'){sigChar='▼ 做空';sigColor='#ef4444';cls='sell'}
+else{sigChar='◆ 观望';sigColor='#f59e0b';cls='hold'}
+
+if(dir!==prevSig&&dir!=='hold'&&navigator.vibrate)navigator.vibrate([80,40,80])
+
+main.textContent=sigChar;main.style.color=sigColor;hero.className='hero '+cls
+dots.forEach((d,i)=>d.className='dot'+((i<n)?' on'+(i===2&&confLevel==='low'?'2':''):''))
+
+let info=''
+if(sig.strength)info=`强度 ${sig.strength}%`
+if(sig.sk_last_5min_ret!==undefined)info+=` 5分: ${sig.sk_last_5min_ret>0?'+':''}${sig.sk_last_5min_ret.toFixed(2)}%`
+sub.textContent=info||sig.timestamp||''
+
+// Signal history
+if(dir!==prevSig){
+sigHistory.unshift(dir);if(sigHistory.length>40)sigHistory.pop()
+renderSigHist()
+}
+prevSig=dir
+}
+
+function renderSigHist(){
+const el=document.getElementById('sigHist')
+el.innerHTML=sigHistory.map(s=>`<div class="sh-dot ${s==='buy'?'b':s==='sell'?'s':'h'}"></div>`).join('')
+}
+
+function updatePrices(data){
+const sig=data.signal,xn=data.xn
+if(sig){
+document.getElementById('skPrice').textContent=(sig.sk_latest||0).toLocaleString()
+document.getElementById('skDataPts').textContent=sig.sk_data_points+'点'
+const ret=sig.sk_last_5min_ret||0
+const el=document.getElementById('skChange')
+el.textContent=(ret>=0?'+':'')+ret.toFixed(2)+'%'
+el.className='c '+(ret>=0?'green':'red')
+document.getElementById('skSub').textContent=`30分: ${sig.sk_last_30min_ret>0?'+':''}${(sig.sk_last_30min_ret||0).toFixed(2)}%`
+}
+if(xn){
+const px=xn.close||0
+document.getElementById('xnPrice').textContent=px.toFixed(2)
+const ch=xn.change_pct||0
+const el=document.getElementById('xnChange')
+el.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'%'
+el.className='c '+(ch>=0?'green':'red')
+document.getElementById('xnSub').textContent=`开:${(xn.open||0).toFixed(2)} 高:${(xn.high||0).toFixed(2)} 低:${(xn.low||0).toFixed(2)}`
+}
+if(sig){
+const vr=sig.sk_vol_ratio||1
+document.getElementById('volRatio').textContent=vr.toFixed(2)+'x'
+document.getElementById('volRatio').className='v '+(sig.sk_vol_surge?'green':'')
+document.getElementById('momDisplay').textContent=(sig.sk_last_5min_ret>=0?'+':'')+(sig.sk_last_5min_ret||0).toFixed(2)+'%'
+document.getElementById('momDisplay').className='v '+((sig.sk_last_5min_ret||0)>1?'green':(sig.sk_last_5min_ret||0)<-1?'red':'')
+document.getElementById('mom15Display').textContent=(sig.sk_last_15min_ret>=0?'+':'')+(sig.sk_last_15min_ret||0).toFixed(2)+'%'
+document.getElementById('mom15Display').className='v '+((sig.sk_last_15min_ret||0)>2?'green':(sig.sk_last_15min_ret||0)<-2?'red':'')
+document.getElementById('mom30Display').textContent=(sig.sk_last_30min_ret>=0?'+':'')+(sig.sk_last_30min_ret||0).toFixed(2)+'%'
+document.getElementById('mom30Display').className='v '+((sig.sk_last_30min_ret||0)>3?'green':(sig.sk_last_30min_ret||0)<-3?'red':'')
+}
+document.getElementById('timeDisplay').textContent=data.server_time||new Date().toLocaleTimeString()
+}
+
+function updateCharts(sig){
+if(!sig||!sig.chart||!sig.chart.length)return
+const data=sig.chart
+const times=data.map(d=>{let t=d.time;return t.slice(8,10)+':'+t.slice(10,12)+':'+t.slice(12,14)})
+const closes=data.map(d=>d.close)
+const vols=data.map(d=>d.volume||0)
+
+priceChart.setOption({xAxis:{data:times},series:[{data:closes}]})
+const avgVol=vols.reduce((a,b)=>a+b,0)/vols.length||1
+volChart.setOption({
+xAxis:{data:times},
+series:[{
+data:vols.map(v=>({value:v,itemStyle:{color:v>avgVol*1.5?'#22c55e':v>avgVol?'#f59e0b':'#475569'}}))
+}]
+})
+document.getElementById('volSurgeLabel').textContent='均量: '+(avgVol>1000?(avgVol/1000).toFixed(0)+'K':avgVol.toFixed(0))
+}
+
+function updateBacktest(d){
+if(!d||!d.daily)return
+const bt2=(d.daily.by_threshold||{})['2.0']||{}
+const id=d.intraday||{},ov=d.daily.overall||{}
+document.getElementById('btWin').textContent=bt2.win_rate?(bt2.win_rate*100).toFixed(1)+'%':'--'
+document.getElementById('btN').textContent=bt2.trades||'--'
+document.getElementById('btSharpe').textContent=bt2.sharpe?bt2.sharpe.toFixed(2):'--'
+document.getElementById('btDD').textContent=bt2.max_drawdown_pct?bt2.max_drawdown_pct.toFixed(1)+'%':'--'
+document.getElementById('btPeriod').textContent=(ov.data_start||'')+' ~ '+(ov.data_end||'')+' · SK→XN下1日'
+document.getElementById('idWin').textContent=id.win_rate?(id.win_rate*100).toFixed(1)+'%':'--'
+document.getElementById('idN').textContent=id.total_trades||'--'
+document.getElementById('idCum').textContent=id.cum_return?id.cum_return.toFixed(1)+'%':'--'
+document.getElementById('idDD').textContent=id.max_drawdown?id.max_drawdown.toFixed(1)+'%':'--'
+document.getElementById('idPeriod').textContent='日内5分K · '+(id.total_trades||0)+'笔'
+}
+
+function fetchRT(){
+fetch('/api/realtime/signal').then(r=>r.json()).then(d=>{
+if(d.error)return
+updateSignal(d.signal||{})
+updatePrices(d)
+updateCharts(d.signal||{})
+}).catch(()=>{})
+}
+function fetchBT(){
+fetch('/api/backtest').then(r=>r.json()).then(d=>{if(!d.error)updateBacktest(d)}).catch(()=>{})
+}
+
+function fetchSigHistory(){
+const tbl=document.getElementById('sigHistoryTable')
+fetch('/api/signals/history?limit=30').then(r=>r.json()).then(d=>{
+if(d.error)return
+document.getElementById('histCount').textContent='共'+d.total+'条'
+const colors={buy:'#22c55e',sell:'#ef4444',hold:'#f59e0b'}
+const labels={buy:'▲做多',sell:'▼做空',hold:'◆观望'}
+let html='<table style="width:100%;font-size:10px;border-collapse:collapse">'
+html+='<tr style="color:#64748b;border-bottom:1px solid #334155"><td style="padding:4px 2px">时间</td><td style="padding:4px 2px">信号</td><td style="padding:4px 2px">分数</td><td style="padding:4px 2px">SK</td><td style="padding:4px 2px">XN</td></tr>'
+const recs=d.records||[]
+const latest=recs[recs.length-1]||{}
+html+=`<tr style="background:rgba(255,255,255,0.03);font-weight:700"><td style="padding:4px 2px">${(latest.timestamp||'').slice(0,8)}</td><td style="color:${colors[latest.final_signal]||'#f59e0b'}">${labels[latest.final_signal]||'?'}</td><td>${(latest.consensus_score||0).toFixed(2)}</td><td>${latest.sk_price||'--'}</td><td>${latest.xn_price||'--'}</td></tr>`
+for(let i=recs.length-2;i>=Math.max(0,recs.length-15);i--){
+const r=recs[i]
+html+=`<tr style="border-top:1px solid #1e293b"><td style="padding:3px 2px;color:#475569">${(r.timestamp||'').slice(0,8)}</td><td style="color:${colors[r.final_signal]||'#f59e0b'}">${labels[r.final_signal]||'?'}</td><td style="color:#64748b">${(r.consensus_score||0).toFixed(2)}</td><td style="color:#64748b">${r.sk_price||'--'}</td><td style="color:#64748b">${r.xn_price||'--'}</td></tr>`
+}
+html+='</table>'
+tbl.innerHTML=html
+}).catch(()=>{})
+}
+
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/static/sw.js').catch(()=>{})
+initCharts()
+fetchBT()
+fetchRT()
+fetchSigHistory()
+setInterval(fetchRT,10000)
+setInterval(fetchBT,120000)
+setInterval(fetchSigHistory,30000)
+</script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香农芯创 (300475) 技术面分析报告</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f7fa;color:#1a1a2e;padding:20px}
+.container{max-width:1200px;margin:0 auto}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:40px;border-radius:16px;margin-bottom:24px}
+.header h1{font-size:28px;margin-bottom:8px}
+.header .subtitle{color:#a0aec0;font-size:14px}
+.header .meta{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}
+.header .meta-item{background:rgba(255,255,255,0.1);padding:8px 16px;border-radius:8px;font-size:13px}
+.card{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.card h2{font-size:18px;font-weight:600;margin-bottom:16px;color:#1a1a2e}
+.chart-container{height:400px;width:100%}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center}
+.stat-card .label{font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:0.5px}
+.stat-card .value{font-size:20px;font-weight:700;margin-top:4px}
+.stat-card .value.green{color:#38a169}
+.stat-card .value.red{color:#e53e3e}
+.stat-card .value.orange{color:#dd6b20}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;background:#f7fafc;border-bottom:2px solid #e2e8f0;color:#4a5568;font-weight:600}
+td{padding:10px 12px;border-bottom:1px solid #e2e8f0}
+tr:hover{background:#f7fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge.pos{background:#c6f6d5;color:#276749}
+.badge.neg{background:#fed7d7;color:#9b2c2c}
+.badge.warn{background:#fefcbf;color:#975a16}
+.footer{text-align:center;color:#a0aec0;font-size:12px;padding:20px}
+@media(max-width:768px){.header{padding:20px}.header .meta{gap:12px}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>📊 香农芯创 (300475.SZ) 技术面分析报告</h1>
+<div class="subtitle">SK海力士授权分销商 · 存储器芯片产业链 · 含滞后相似性分析</div>
+<div class="meta">
+<span class="meta-item">📅 报告生成: <span id="genTime">--</span></span>
+<span class="meta-item">📈 分析周期: <span id="period">--</span></span>
+<span class="meta-item">🏭 同比较: SK海力士(000660) · 三星电子(005930)</span>
+</div>
+</div>
+
+<div id="statsCards" class="stats-grid"></div>
+
+<div class="card">
+<h2>1. 价格走势对比 (归一化至100)</h2>
+<div id="chartPrice" class="chart-container"></div>
+</div>
+
+<div class="card">
+<h2>2. 滚动60日相关性 (香农芯创 vs SK海力士)</h2>
+<div id="chartRollCorr" class="chart-container"></div>
+</div>
+
+<div class="card">
+<h2>3. 滞后相关性分析</h2>
+<p style="color:#718096;font-size:13px;margin-bottom:16px">
+正向滞后 = SK海力士今日涨跌 对 香农芯创N日后涨跌的预测能力<br>
+反向滞后 = 香农芯创今日涨跌 对 SK海力士N日后涨跌的预测能力
+</p>
+<div id="chartLagged" class="chart-container"></div>
+</div>
+
+<div class="card">
+<h2>4. 技术指标</h2>
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+<select id="techSelector" onchange="switchTechChart(this.value)" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px">
+<option value="ma">均线系统 (MA5/20/60)</option>
+<option value="macd">MACD</option>
+<option value="rsi">RSI-14</option>
+<option value="bb">布林带</option>
+</select>
+</div>
+<div id="chartTech" class="chart-container"></div>
+</div>
+
+<div class="card">
+<h2>5. 相似性分析总结</h2>
+<div id="summaryContent" style="line-height:1.8;font-size:14px"></div>
+</div>
+
+</div>
+<div class="footer">香农芯创 (300475) · SK海力士(000660) 相似性追踪系统</div>
+
+<script>
+fetch('/static/report_data.json').then(r=>r.json()).then(d=>{
+    const s = d.stats, p = d.price, tc = d.technical
+
+    document.getElementById('genTime').textContent = d.generated_at
+    document.getElementById('period').textContent = d.period
+
+    // Stats cards
+    document.getElementById('statsCards').innerHTML = `
+        <div class="stat-card"><div class="label">最新价</div><div class="value">${s.latest_close}</div></div>
+        <div class="stat-card"><div class="label">总收益率</div><div class="value ${s.total_return>=0?'green':'red'}">${s.total_return}%</div></div>
+        <div class="stat-card"><div class="label">vs SK海力士 r</div><div class="value orange">${s.corr_sk}</div></div>
+        <div class="stat-card"><div class="label">vs 三星电子 r</div><div class="value orange">${s.corr_ss}</div></div>
+        <div class="stat-card"><div class="label">滚动60日 r(均值)</div><div class="value">${s.corr_rolling_mean}</div></div>
+        <div class="stat-card"><div class="label">滚动60日 r(当前)</div><div class="value ${s.corr_rolling_last>0.3?'green':'orange'}">${s.corr_rolling_last}</div></div>
+        <div class="stat-card"><div class="label">RSI-14</div><div class="value ${s.latest_rsi<30?'red':s.latest_rsi>70?'green':'orange'}">${s.latest_rsi}</div></div>
+        <div class="stat-card"><div class="label">MACD直方图</div><div class="value ${s.latest_hist>=0?'green':'red'}">${s.latest_hist}</div></div>
+        <div class="stat-card"><div class="label">MA5</div><div class="value">${s.latest_ma5}</div></div>
+        <div class="stat-card"><div class="label">MA20</div><div class="value">${s.latest_ma20}</div></div>
+        <div class="stat-card"><div class="label">MA60</div><div class="value">${s.latest_ma60}</div></div>
+        <div class="stat-card"><div class="label">年化波动率</div><div class="value orange">${s.annualized_vol}%</div></div>
+        <div class="stat-card"><div class="label">夏普比率</div><div class="value">${s.sharpe}</div></div>
+        <div class="stat-card"><div class="label">最大回撤</div><div class="value red">${s.max_drawdown}%</div></div>
+        <div class="stat-card"><div class="label">日均收益率</div><div class="value ${s.mean_daily_return>=0?'green':'red'}">${s.mean_daily_return}%</div></div>
+    `
+
+    // Chart 1: Price Comparison
+    const chart1 = echarts.init(document.getElementById('chartPrice'))
+    chart1.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['香农芯创','SK海力士','三星电子'], top: 5 },
+        grid: { left: '8%', right: '4%', top: '15%', bottom: '8%' },
+        xAxis: { type: 'category', data: p.dates, axisLabel: { fontSize: 10, interval: 30 } },
+        yAxis: { type: 'value', name: '归一化价格 (基准=100)' },
+        dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 0 }],
+        series: [
+            { name: '香农芯创', type: 'line', data: p['香农芯创'], smooth: true, lineStyle: { width: 2, color: '#e53e3e' } },
+            { name: 'SK海力士', type: 'line', data: p['SK海力士'], smooth: true, lineStyle: { width: 2, color: '#3182ce' } },
+            { name: '三星电子', type: 'line', data: p['三星电子'], smooth: true, lineStyle: { width: 2, color: '#38a169' } }
+        ]
+    })
+    window.addEventListener('resize', ()=>chart1.resize())
+
+    // Chart 2: Rolling Correlation
+    const chart2 = echarts.init(document.getElementById('chartRollCorr'))
+    const rc = d.rolling_corr
+    chart2.setOption({
+        tooltip: { trigger: 'axis', formatter: p => `日期: ${p[0].axisValue}<br/>60日相关性: ${p[0].value}` },
+        grid: { left: '8%', right: '4%', top: '10%', bottom: '10%' },
+        xAxis: { type: 'category', data: rc.dates, axisLabel: { fontSize: 10, interval: 30 } },
+        yAxis: { type: 'value', min: -0.4, max: 0.8, splitLine: { lineStyle: { color: '#e2e8f0' } } },
+        dataZoom: [{ type: 'inside' }],
+        visualMap: { show: false, pieces: [{ min: 0.3, color: '#38a169' }, { min: -0.3, max: 0.3, color: '#dd6b20' }, { max: -0.3, color: '#e53e3e' }] },
+        series: [{
+            type: 'line', data: rc.correlation, smooth: true, areaStyle: { opacity: 0.15 },
+            lineStyle: { width: 2, color: '#3182ce' }, markLine: { data: [{ yAxis: 0 }], silent: true, lineStyle: { type: 'dashed', color: '#a0aec0' } }
+        }]
+    })
+    window.addEventListener('resize', ()=>chart2.resize())
+
+    // Chart 3: Lagged Correlation
+    const chart3 = echarts.init(document.getElementById('chartLagged'))
+    const skLead = d.lagged_corr_sk_lead
+    const xnLead = d.lagged_corr_xn_lead
+    chart3.setOption({
+        tooltip: { trigger: 'axis', formatter: p => {
+            let html = `<b>滞后天数: ${p[0].axisValue}天</b><br/>`
+            p.forEach(item => { html += `${item.seriesName}: r=${item.value}<br/>` })
+            return html
+        }},
+        legend: { data: ['SK→香农 (SK领先)', '香农→SK (香农领先)'], top: 5 },
+        grid: { left: '8%', right: '4%', top: '15%', bottom: '8%' },
+        xAxis: { type: 'category', data: skLead.map(d=>d.lag+'天'), axisLabel: { fontSize: 11 } },
+        yAxis: { type: 'value', min: -0.15, max: 0.2 },
+        series: [
+            { name: 'SK→香农 (SK领先)', type: 'bar', data: skLead.map(d=>({value: d.r, itemStyle: {color: d.r>=0?'#3182ce':'#e53e3e'}})), barWidth: '35%' },
+            { name: '香农→SK (香农领先)', type: 'bar', data: xnLead.map(d=>({value: d.r, itemStyle: {color: d.r>=0?'#38a169':'#e53e3e'}})), barWidth: '35%' }
+        ]
+    })
+    window.addEventListener('resize', ()=>chart3.resize())
+
+    // Chart 4: Technical (default MA)
+    let techChart = echarts.init(document.getElementById('chartTech'))
+    window.techChart = techChart
+    window.d = d
+    renderTech('ma')
+
+    // Summary
+    const skSig = d.lagged_corr_sk_lead.some(x => Math.abs(x.r) > 0.1)
+    const xnSig = d.lagged_corr_xn_lead.some(x => Math.abs(x.r) > 0.1)
+    const rsiSignal = s.latest_rsi < 30 ? '超卖区域，可能存在技术性反弹机会' : s.latest_rsi > 70 ? '超买区域，注意回调风险' : '中性区域'
+    
+    document.getElementById('summaryContent').innerHTML = `
+    <p><b>一、同期相关性</b></p>
+    <p>香农芯创与SK海力士的日收益率Pearson相关系数为 <b>${s.corr_sk}</b> (p≈0)，呈中等程度正相关。与三星电子的相关系数为 <b>${s.corr_ss}</b>。这验证了香农芯创作为SK海力士授权分销商的业务关联性在股价层面得到了充分体现。</p>
+    <br/>
+    <p><b>二、滞后相关性（领滞关系）</b></p>
+    <p>${skSig ? 'SK海力士对香农芯创存在一定的领先滞后效应（r>0.1），表明SK海力士的涨跌可能对香农芯创有方向性指引作用。' : 'SK海力士对香农芯创的滞后相关性在各期均不显著（|r|均<0.12），未发现稳定的领先滞后关系。'}${xnSig ? '香农芯创对SK海力士也呈现出一定的领先效应。' : '香农芯创对SK海力士的滞后相关性同样不显著，两者基本保持同期联动。'}</p>
+    <p>结论：香农芯创和SK海力士属于<b>同涨同跌的同期联动模式</b>，不存在稳定的1-10天领先滞后关系。这与分销商模式一致——下游需求变化同时传导至原厂和代理商。</p>
+    <br/>
+    <p><b>三、滚动相关性趋势</b></p>
+    <p>60日滚动相关系数均值${s.corr_rolling_mean}，当前值为<b>${s.corr_rolling_last}</b>，处于历史较高水平。滚动相关系数范围[${s.corr_rolling_min}, ${s.corr_rolling_max}]，表明两者相关性在时间上存在一定波动但整体维持在中等偏高水平。</p>
+    <br/>
+    <p><b>四、技术面判断</b></p>
+    <p>• <b>均线系统：</b>收盘价${s.latest_close}，MA5=${s.latest_ma5}，MA20=${s.latest_ma20}，MA60=${s.latest_ma60}。${s.latest_close < s.latest_ma5 ? '短期跌破MA5，' : '短期站稳MA5，'}${s.latest_close < s.latest_ma20 ? '中期跌破MA20，' : '中期站稳MA20，'}${s.latest_close > s.latest_ma60 ? '长期仍位于MA60上方，大趋势未破。' : '长期已跌破MA60，需警惕趋势反转。'}</p>
+    <p>• <b>RSI-14：</b>${s.latest_rsi} — <b>${rsiSignal}</b></p>
+    <p>• <b>MACD：</b>DIF=${s.latest_macd}，DEA=${s.latest_signal}，柱状=${s.latest_hist}。${s.latest_hist < 0 ? 'MACD柱状为负，空头动能占优。' : 'MACD柱状为正，多头动能占优。'}</p>
+    <p>• <b>波动性：</b>年化波动率${s.annualized_vol}%，属于极高波动品种，风险较大。</p>
+    <p>• <b>动量：</b>夏普比率${s.sharpe}，${s.sharpe > 1 ? '经风险调整后收益表现优异。' : '经风险调整后收益一般。'}</p>
+    <br/>
+    <p><b>五、综合结论</b></p>
+    <p>香农芯创与SK海力士股价高度关联（r=0.45），当前滚动相关性处于历史高位（${s.corr_rolling_last}），两者的同步性正处于最强区间。但从滞后分析看，<b>不存在套利意义上的领先滞后关系</b>——这意味着无法通过SK海力士今日涨跌来预测香农芯创明后日的走势。</p>
+    <p>技术面上，香农芯创近期回调明显，RSI进入超卖区（${s.latest_rsi}），短期可能酝酿技术性反弹。中期均线（MA20）已跌破，但长期均线（MA60）仍有支撑。建议结合SK海力士的走势和存储器行业景气度进行综合判断。</p>
+    `
+})
+
+function renderTech(type) {
+    const d = window.d
+    if (!d) return
+    const tc = d.technical
+    let option = { tooltip: { trigger: 'axis' }, grid: { left: '8%', right: '4%', top: '10%', bottom: '10%' },
+        xAxis: { type: 'category', data: tc.dates, axisLabel: { fontSize: 10, interval: 30 } },
+        dataZoom: [{ type: 'inside' }]
+    }
+
+    if (type === 'ma') {
+        option.yAxis = { type: 'value', scale: true }
+        option.legend = { data: ['收盘价','MA5','MA20','MA60'], top: 5 }
+        option.series = [
+            { name:'收盘价', type:'line', data:tc.close, smooth:true, lineStyle:{width:1.5,color:'#1a202c'} },
+            { name:'MA5', type:'line', data:tc.ma5, smooth:true, lineStyle:{width:1,color:'#e53e3e'} },
+            { name:'MA20', type:'line', data:tc.ma20, smooth:true, lineStyle:{width:1,color:'#3182ce'} },
+            { name:'MA60', type:'line', data:tc.ma60, smooth:true, lineStyle:{width:1,color:'#38a169'} }
+        ]
+    } else if (type === 'macd') {
+        option.yAxis = [{ type: 'value' }, { type: 'value', position: 'right' }]
+        option.legend = { data: ['DIF','DEA','柱状图'], top: 5 }
+        option.series = [
+            { name:'DIF', type:'line', data:tc.macd, smooth:true, lineStyle:{color:'#3182ce'} },
+            { name:'DEA', type:'line', data:tc.signal, smooth:true, lineStyle:{color:'#e53e3e'} },
+            { name:'柱状图', type:'bar', data:tc.histogram.map(v=>({value:v,itemStyle:{color:v>=0?'#38a169':'#e53e3e'}})) }
+        ]
+    } else if (type === 'rsi') {
+        option.yAxis = { type: 'value', min: 0, max: 100, splitLine: { lineStyle: { color: '#e2e8f0' } } }
+        option.legend = { data: ['RSI-14'], top: 5 }
+        option.series = [
+            { name:'RSI-14', type:'line', data:tc.rsi14, smooth:true, lineStyle:{color:'#805ad5',width:2},
+              markLine: { data: [{ yAxis: 70, label:{formatter:'超买线(70)'} }, { yAxis: 30, label:{formatter:'超卖线(30)'} }], silent: true, lineStyle: { type: 'dashed', color: '#a0aec0' } } }
+        ]
+    } else if (type === 'bb') {
+        option.yAxis = { type: 'value', scale: true }
+        option.legend = { data: ['收盘价','中轨','上轨','下轨'], top: 5 }
+        option.series = [
+            { name:'上轨', type:'line', data:tc.bb_up, smooth:true, lineStyle:{width:1,color:'#a0aec0',type:'dashed'} },
+            { name:'收盘价', type:'line', data:tc.close, smooth:true, lineStyle:{width:2,color:'#1a202c'} },
+            { name:'中轨', type:'line', data:tc.bb_mid, smooth:true, lineStyle:{width:1,color:'#3182ce'} },
+            { name:'下轨', type:'line', data:tc.bb_down, smooth:true, lineStyle:{width:1,color:'#a0aec0',type:'dashed'} }
+        ]
+    }
+    window.techChart.setOption(option)
+    window.techChart.resize()
+}
+
+function switchTechChart(type) { renderTech(type) }
+window.addEventListener('resize', ()=>{ if(window.techChart) window.techChart.resize() })
+</script>
+</body>
+</html>

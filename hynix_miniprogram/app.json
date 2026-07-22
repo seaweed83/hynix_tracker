@@ -1,0 +1,53 @@
+{
+  "pages": [
+    "pages/signal/signal",
+    "pages/report/report",
+    "pages/backtest/backtest",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0f172a",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "SK→XN 联动信号",
+    "backgroundColor": "#0b1120",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": true
+  },
+  "tabBar": {
+    "color": "#64748b",
+    "selectedColor": "#3b82f6",
+    "backgroundColor": "#1e293b",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/signal/signal",
+        "text": "实时信号",
+        "iconPath": "images/signal.png",
+        "selectedIconPath": "images/signal_on.png"
+      },
+      {
+        "pagePath": "pages/report/report",
+        "text": "综合分析",
+        "iconPath": "images/report.png",
+        "selectedIconPath": "images/report_on.png"
+      },
+      {
+        "pagePath": "pages/backtest/backtest",
+        "text": "回测",
+        "iconPath": "images/bt.png",
+        "selectedIconPath": "images/bt_on.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "images/settings.png",
+        "selectedIconPath": "images/settings_on.png"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 10000,
+    "connectSocket": 10000
+  },
+  "sitemapLocation": "sitemap.json"
+}

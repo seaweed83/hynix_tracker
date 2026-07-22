@@ -1,0 +1,62 @@
+<view class="page">
+  <!-- 日线回测 -->
+  <view class="section">
+    <view class="sec-title">📊 日线回测 · SK→香农下一日方向</view>
+    <view class="bt-table">
+      <view class="bt-row bt-header">
+        <text class="bt-cell">阈值</text>
+        <text class="bt-cell">交易数</text>
+        <text class="bt-cell">胜率</text>
+        <text class="bt-cell">夏普</text>
+        <text class="bt-cell">回撤</text>
+        <text class="bt-cell">累计</text>
+      </view>
+      <view wx:for="{{dailyResults}}" wx:key="thresh" class="bt-row">
+        <text class="bt-cell">{{item.thresh}}%</text>
+        <text class="bt-cell">{{item.trades}}</text>
+        <text class="bt-cell green">{{item.winRate}}</text>
+        <text class="bt-cell orange">{{item.sharpe}}</text>
+        <text class="bt-cell red">{{item.dd}}</text>
+        <text class="bt-cell green">{{item.cumRet}}</text>
+      </view>
+    </view>
+    <view class="bt-note">数据区间: {{dataStart}} ~ {{dataEnd}} · {{days}}个交易日</view>
+  </view>
+
+  <!-- 日内回测 -->
+  <view class="section">
+    <view class="sec-title">📊 日内5分回测 · SK领先1根K线</view>
+    <view class="bt-grid">
+      <view class="bt-item"><text class="bt-l">方向准确率</text><text class="bt-v green">{{idWinRate}}</text></view>
+      <view class="bt-item"><text class="bt-l">交易笔数</text><text class="bt-v blue">{{idTrades}}</text></view>
+      <view class="bt-item"><text class="bt-l">单笔均收益</text><text class="bt-v orange">{{idAvgRet}}</text></view>
+      <view class="bt-item"><text class="bt-l">单笔均赢</text><text class="bt-v green">{{idAvgWin}}</text></view>
+    </view>
+    <view class="bt-grid" style="margin-top:6px">
+      <view class="bt-item"><text class="bt-l">单笔均亏</text><text class="bt-v red">{{idAvgLoss}}</text></view>
+      <view class="bt-item"><text class="bt-l">累计收益</text><text class="bt-v green">{{idCumRet}}</text></view>
+      <view class="bt-item"><text class="bt-l">夏普比</text><text class="bt-v orange">{{idSharpe}}</text></view>
+      <view class="bt-item"><text class="bt-l">最大回撤</text><text class="bt-v red">{{idDD}}</text></view>
+    </view>
+  </view>
+
+  <!-- 整体相关性 -->
+  <view class="section">
+    <view class="sec-title">📈 相关性分析</view>
+    <view class="corr-grid">
+      <view class="corr-item">
+        <text class="corr-l">同期相关性</text>
+        <text class="corr-v blue">{{contempCorr}}</text>
+        <text class="corr-p">p={{contempP}}</text>
+      </view>
+      <view class="corr-item">
+        <text class="corr-l">SK领先1日</text>
+        <text class="corr-v orange">{{lead1Corr}}</text>
+        <text class="corr-p">p={{lead1P}}</text>
+      </view>
+    </view>
+    <view class="bt-note">SK涨跌→香农次日同向概率 ~50.5%，略高于随机，需结合日内信号增强</view>
+  </view>
+
+  <view class="update-time">{{updateTime}}</view>
+</view>

@@ -1,0 +1,50 @@
+<view class="page">
+  <!-- 顶部概览 -->
+  <view class="overview-grid">
+    <view class="ov-item"><text class="ov-l">香农芯创</text><text class="ov-v orange" id="xnPrice2">{{xnPrice}}</text></view>
+    <view class="ov-item"><text class="ov-l">与SK相关性</text><text class="ov-v blue">{{correlation}}</text></view>
+    <view class="ov-item"><text class="ov-l">日内5分r</text><text class="ov-v purple">{{intradayR}}</text></view>
+    <view class="ov-item"><text class="ov-l">信号评分</text><text class="ov-v green">{{signalScore}}</text></view>
+  </view>
+
+  <!-- 回测概览 -->
+  <view class="section">
+    <view class="sec-title">📊 回测概览</view>
+    <view class="bt-grid">
+      <view class="bt-item"><text class="bt-l">日线胜率(2%)</text><text class="bt-v green">{{btWinRate}}</text></view>
+      <view class="bt-item"><text class="bt-l">交易笔数</text><text class="bt-v blue">{{btTrades}}</text></view>
+      <view class="bt-item"><text class="bt-l">夏普比</text><text class="bt-v orange">{{btSharpe}}</text></view>
+      <view class="bt-item"><text class="bt-l">最大回撤</text><text class="bt-v red">{{btDD}}</text></view>
+    </view>
+    <view class="bt-grid" style="margin-top:6px">
+      <view class="bt-item"><text class="bt-l">日内方向准确率</text><text class="bt-v green">{{idWinRate}}</text></view>
+      <view class="bt-item"><text class="bt-l">日内样本</text><text class="bt-v blue">{{idTrades}}</text></view>
+      <view class="bt-item"><text class="bt-l">单笔均收益</text><text class="bt-v orange">{{idAvgRet}}</text></view>
+      <view class="bt-item"><text class="bt-l">累计收益</text><text class="bt-v green">{{idCumRet}}</text></view>
+    </view>
+  </view>
+
+  <!-- 研报摘要 -->
+  <view class="section">
+    <view class="sec-title">📋 券商研报共识</view>
+    <view class="insight neutral">
+      <text class="insight-title">7家机构一致"买入/看多"</text>
+      <text class="insight-body">核心逻辑：存储超级周期+AI存力爆发+HBM独家代理+海普存储量产。当前股价已基本兑现目标价区间(160-202)。</text>
+    </view>
+    <view class="insight warn">
+      <text class="insight-title">⚠️ 风险提示</text>
+      <text class="insight-body">• 硅周期4-5年一轮 • 库存50-60亿，跌价20%→减值10-12亿 • 60%收入依赖SK • 自研仅5%营收</text>
+    </view>
+  </view>
+
+  <!-- 策略规则 -->
+  <view class="rule-box">
+    <text class="rule-title">⚡ 超短线规则</text>
+    <text class="rule-line">🟢 做多: SK 5分涨&gt;1.5% + 量&gt;1.5x均值 → 买入香农, 持有5分</text>
+    <text class="rule-line">🔴 做空: SK 5分跌&lt;-1.5% + 量&gt;1.5x均值 → 卖出香农, 持有5分</text>
+    <text class="rule-line">⛔ 止损: -2% · 🟠 仓位: &lt;10%/笔</text>
+    <text class="rule-line">🟣 盘前: 韩国8:00-9:30(CST)预判A股开盘方向, 80%有效(6天统计)</text>
+  </view>
+
+  <view class="update-time">{{updateTime}}</view>
+</view>

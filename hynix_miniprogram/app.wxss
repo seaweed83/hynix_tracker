@@ -1,0 +1,13 @@
+page {
+  background: #0b1120;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+.green { color: #22c55e }
+.red { color: #ef4444 }
+.orange { color: #f59e0b }
+.blue { color: #3b82f6 }
+.purple { color: #a855f7 }
+.gray { color: #64748b }

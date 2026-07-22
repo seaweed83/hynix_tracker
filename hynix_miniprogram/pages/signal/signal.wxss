@@ -1,0 +1,43 @@
+.page{padding:0 0 20px 0;min-height:100vh}
+.hero{padding:24px 16px 18px;text-align:center;transition:all 0.3s}
+.hero.buy{background:linear-gradient(180deg,#064e3b60,#0b1120)}
+.hero.sell{background:linear-gradient(180deg,#7f1d1d60,#0b1120)}
+.hero.hold{background:linear-gradient(180deg,#1e3a5f40,#0b1120)}
+.sig-icon{font-size:48px;line-height:1}
+.sig-text{font-size:26px;font-weight:800;margin:4px 0 6px}
+.sig-sub{font-size:12px;color:#94a3b8}
+.green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}
+.conf-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.dot{width:18px;height:4px;border-radius:2px;background:#334155}
+.dot.on{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.5)}
+.dot.on2{background:#f59e0b}
+.dot.on3{background:#ef4444}
+
+.price-row{display:flex;gap:8px;padding:8px 12px}
+.price-card{flex:1;background:#1e293b;border-radius:10px;padding:12px;border:1px solid #334155}
+.p-label{font-size:10px;color:#64748b}
+.p-price{font-size:26px;font-weight:800;margin:2px 0}
+.p-change{font-size:13px;font-weight:600}
+.p-sub{font-size:9px;color:#475569;margin-top:2px}
+
+.mom-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 12px}
+.mom-item{background:#1e293b;border-radius:8px;padding:10px;display:flex;flex-direction:column;border:1px solid #334155}
+.mom-l{font-size:10px;color:#64748b}
+.mom-v{font-size:18px;font-weight:700;margin-top:2px}
+
+.section{margin:8px 12px;background:#1e293b;border-radius:10px;padding:12px;border:1px solid #334155}
+.sec-title{font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px}
+.chart-canvas{width:100%;height:160px;border-radius:6px}
+
+.sig-hist-scroll{white-space:nowrap;overflow-x:auto}
+.sig-hist{display:inline-flex;gap:4px;padding:4px 0}
+.sh-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.sh-dot.buy{background:#22c55e}
+.sh-dot.sell{background:#ef4444}
+.sh-dot.hold{background:#475569}
+
+.rule-box{background:#1e293b;border-radius:10px;margin:8px 12px;padding:14px;border:1px solid #334155;display:flex;flex-direction:column}
+.rule-title{font-size:12px;color:#e2e8f0;font-weight:600;margin-bottom:6px}
+.rule-line{font-size:11px;color:#94a3b8;line-height:1.8}
+
+.update-time{text-align:center;font-size:10px;color:#475569;padding:12px}

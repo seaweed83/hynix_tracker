@@ -1,0 +1,26 @@
+.page{padding:0 0 20px}
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 12px}
+.ov-item{background:#1e293b;border-radius:8px;padding:10px;text-align:center;border:1px solid #334155}
+.ov-l{display:block;font-size:10px;color:#64748b}
+.ov-v{display:block;font-size:20px;font-weight:800;margin-top:2px}
+
+.section{margin:8px 12px;background:#1e293b;border-radius:10px;padding:12px;border:1px solid #334155}
+.sec-title{font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px}
+
+.bt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.bt-item{text-align:center;background:#0b1120;border-radius:6px;padding:8px}
+.bt-l{display:block;font-size:8px;color:#64748b}
+.bt-v{display:block;font-size:14px;font-weight:700;margin-top:2px}
+
+.insight{background:#0b1120;border-radius:6px;padding:10px;margin-bottom:6px;border-left:3px solid}
+.insight.neutral{border-color:#f59e0b}
+.insight.warn{border-color:#ef4444}
+.insight-title{display:block;font-size:12px;font-weight:600;color:#e2e8f0;margin-bottom:4px}
+.insight-body{display:block;font-size:11px;color:#94a3b8;line-height:1.6}
+
+.rule-box{background:#1e293b;border-radius:10px;margin:8px 12px;padding:14px;border:1px solid #334155;display:flex;flex-direction:column}
+.rule-title{font-size:12px;color:#e2e8f0;font-weight:600;margin-bottom:6px}
+.rule-line{font-size:11px;color:#94a3b8;line-height:1.8}
+
+.update-time{text-align:center;font-size:10px;color:#475569;padding:12px}
+.blue{color:#3b82f6}.green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}.purple{color:#a855f7}

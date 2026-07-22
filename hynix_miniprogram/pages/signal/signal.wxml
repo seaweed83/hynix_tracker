@@ -1,0 +1,77 @@
+<view class="page">
+  <!-- 信号英雄区 -->
+  <view class="hero {{sigClass}}">
+    <view class="sig-icon {{sigColorClass}}">{{sigChar}}</view>
+    <view class="sig-text {{sigColorClass}}">{{sigText}}</view>
+    <view class="sig-sub">{{sigSub}}</view>
+    <view class="conf-dots">
+      <view class="dot {{dot1}}"></view>
+      <view class="dot {{dot2}}"></view>
+      <view class="dot {{dot3}}"></view>
+    </view>
+  </view>
+
+  <!-- 价格卡片 -->
+  <view class="price-row">
+    <view class="price-card">
+      <view class="p-label">🇰🇷 SK Hynix</view>
+      <view class="p-price">{{skPrice}}</view>
+      <view class="p-change {{skColor}}">{{skChange}}</view>
+      <view class="p-sub">{{skSub}}</view>
+    </view>
+    <view class="price-card">
+      <view class="p-label">🇨🇳 香农芯创</view>
+      <view class="p-price">{{xnPrice}}</view>
+      <view class="p-change {{xnColor}}">{{xnChange}}</view>
+      <view class="p-sub">{{xnSub}}</view>
+    </view>
+  </view>
+
+  <!-- 动量面板 -->
+  <view class="mom-grid">
+    <view class="mom-item">
+      <text class="mom-l">📊 量比</text>
+      <text class="mom-v {{volColor}}">{{volRatio}}</text>
+    </view>
+    <view class="mom-item">
+      <text class="mom-l">📈 5分</text>
+      <text class="mom-v {{mom5Color}}">{{mom5}}</text>
+    </view>
+    <view class="mom-item">
+      <text class="mom-l">🔵 15分</text>
+      <text class="mom-v {{mom15Color}}">{{mom15}}</text>
+    </view>
+    <view class="mom-item">
+      <text class="mom-l">🔴 30分</text>
+      <text class="mom-v {{mom30Color}}">{{mom30}}</text>
+    </view>
+  </view>
+
+  <!-- SK价格走势 (Canvas) -->
+  <view class="section">
+    <view class="sec-title">📈 SK海力士 1分走势</view>
+    <canvas type="2d" id="priceCanvas" class="chart-canvas"></canvas>
+  </view>
+
+  <!-- 信号历史 -->
+  <view class="section">
+    <view class="sec-title" style="margin-bottom:6px">⏱ 信号历史</view>
+    <scroll-view scroll-x class="sig-hist-scroll">
+      <view class="sig-hist">
+        <view wx:for="{{sigHistory}}" wx:key="index" class="sh-dot {{item}}"></view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 规则 -->
+  <view class="rule-box">
+    <text class="rule-title">⚡ 超短线规则</text>
+    <text class="rule-line">🟢 做多: SK 5分涨&gt;1.5% + 量&gt;1.5x → 买入香农, 持有5分</text>
+    <text class="rule-line">🔴 做空: SK 5分跌&lt;-1.5% + 量&gt;1.5x → 卖出香农, 持有5分</text>
+    <text class="rule-line">⛔ 止损: -2% · 🟠 仓位: &lt;10%/笔</text>
+    <text class="rule-line">🟣 盘前信号: 韩国8:00-9:30预判A股开盘</text>
+  </view>
+
+  <!-- 更新时间 -->
+  <view class="update-time">{{updateTime}}</view>
+</view>

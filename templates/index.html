@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海力士追踪器 — SK Hynix 相似股票分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-indigo-700">海力士追踪器</h1>
+                    <p class="text-gray-500 mt-1">SK Hynix (000660.KS) · A股相似走势股票分析</p>
+                </div>
+                <div class="text-right text-sm text-gray-400">
+                    <div id="updateTime">加载中...</div>
+                    <button onclick="refreshAll()" class="mt-2 px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">刷新数据</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+            <div id="marketOverview" class="lg:col-span-4">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">A股大盘概览</h2>
+                <div id="marketCards" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-gray-700">SK Hynix 股价走势</h2>
+                    <div id="hynixSummary" class="text-sm text-gray-500"></div>
+                </div>
+                <div id="hynixChart" style="height:400px;"></div>
+                <div id="hynixStats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4"></div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-gray-700">基本信息</h2>
+                </div>
+                <div id="hynixInfo" class="space-y-3 text-sm"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-700">A股相似走势股票 (按相关性排序)</h2>
+                <div class="text-sm text-gray-400">
+                    基于 <span id="periodDisplay">120</span> 日收益率相关性
+                    <select id="periodSelect" onchange="changePeriod(this.value)" class="ml-2 border rounded px-2 py-0.5 text-sm">
+                        <option value="60">60日</option>
+                        <option value="120" selected>120日</option>
+                        <option value="250">250日</option>
+                    </select>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="similarTable">
+                    <thead>
+                        <tr class="border-b text-gray-500">
+                            <th class="text-left py-2 px-2">#</th>
+                            <th class="text-left py-2 px-2">代码</th>
+                            <th class="text-left py-2 px-2">名称</th>
+                            <th class="text-left py-2 px-2">板块</th>
+                            <th class="text-right py-2 px-2">相关性</th>
+                            <th class="text-right py-2 px-2">最新价</th>
+                            <th class="text-right py-2 px-2">当日涨跌</th>
+                            <th class="text-right py-2 px-2">30日涨跌</th>
+                        </tr>
+                    </thead>
+                    <tbody id="similarBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = null;
+        let hynixChart = null;
+
+        function fmt(v) { return v?.toLocaleString?.() ?? v ?? '-'; }
+        function fmtPct(v) { return (v > 0 ? '+' : '') + v.toFixed(2) + '%'; }
+        function pctClass(v) { return v >= 0 ? 'text-green-600' : 'text-red-600'; }
+
+        function renderMarket(market) {
+            const container = document.getElementById('marketCards');
+            if (!market || market.error) {
+                container.innerHTML = '<div class="col-span-4 text-gray-400">数据获取失败</div>';
+                return;
+            }
+            let html = '';
+            Object.entries(market).forEach(([name, data]) => {
+                if (data.error) {
+                    html += `<div class="bg-white rounded-lg border p-3"><div class="text-gray-400">${name}: ${data.error}</div></div>`;
+                    return;
+                }
+                html += `<div class="bg-white rounded-lg border p-3 hover:shadow transition">
+                    <div class="text-xs text-gray-400">${name}</div>
+                    <div class="text-xl font-bold mt-0.5">${data.close.toFixed(2)}</div>
+                    <div class="${pctClass(data.change_pct)} text-sm font-medium">${fmtPct(data.change_pct)}</div>
+                    <div class="text-xs text-gray-400 mt-1">30日高 ${data.high_30d} / 低 ${data.low_30d}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderHynix(hynix) {
+            if (!hynix || hynix.error) {
+                document.getElementById('hynixSummary').innerHTML = '<span class="text-red-500">数据获取失败</span>';
+                return;
+            }
+            const s = hynix.summary;
+            document.getElementById('hynixSummary').innerHTML = `
+                <span class="text-lg font-bold ${pctClass(s.change_pct)}">${s.close.toFixed(2)}</span>
+                <span class="${pctClass(s.change_pct)}">${fmtPct(s.change_pct)}</span>
+            `;
+
+            // Info
+            document.getElementById('hynixInfo').innerHTML = `
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">公司名称</span><span class="font-medium">${s.name || 'SK Hynix'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">市值</span><span class="font-medium">${s.market_cap ? (s.market_cap / 1e12).toFixed(2) + ' 万亿韩元' : '-'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">市盈率</span><span class="font-medium">${s.pe_ratio ? s.pe_ratio.toFixed(2) + 'x' : '-'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">行业</span><span class="font-medium">${s.sector || '-'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">MA(20)</span><span class="font-medium">${s.ma_20?.toFixed(2) || '-'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">MA(60)</span><span class="font-medium">${s.ma_60?.toFixed(2) || '-'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">30日涨跌</span><span class="font-medium ${pctClass(s.change_30d)}">${fmtPct(s.change_30d)}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">90日涨跌</span><span class="font-medium ${pctClass(s.change_90d)}">${fmtPct(s.change_90d)}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">52周高</span><span class="font-medium">${s.high_52w?.toFixed(2) || '-'}</span></div>
+                <div class="flex justify-between pb-2"><span class="text-gray-400">52周低</span><span class="font-medium">${s.low_52w?.toFixed(2) || '-'}</span></div>
+            `;
+
+            // Stats row
+            document.getElementById('hynixStats').innerHTML = `
+                <div class="bg-gray-50 rounded p-2 text-center"><div class="text-xs text-gray-400">30日高</div><div class="font-bold">${s.high_30d?.toFixed(2) || '-'}</div></div>
+                <div class="bg-gray-50 rounded p-2 text-center"><div class="text-xs text-gray-400">30日低</div><div class="font-bold">${s.low_30d?.toFixed(2) || '-'}</div></div>
+                <div class="bg-gray-50 rounded p-2 text-center"><div class="text-xs text-gray-400">30日均量</div><div class="font-bold">${s.vol_avg_30d ? (s.vol_avg_30d/1000).toFixed(0) + 'K' : '-'}</div></div>
+                <div class="bg-gray-50 rounded p-2 text-center"><div class="text-xs text-gray-400">30日涨跌</div><div class="font-bold ${pctClass(s.change_30d)}">${fmtPct(s.change_30d)}</div></div>
+            `;
+
+            // Chart
+            if (hynix.price_data && hynix.price_data.length > 0) {
+                const dates = hynix.price_data.map(d => d.date);
+                const closes = hynix.price_data.map(d => d.close);
+                const volumes = hynix.price_data.map(d => d.volume);
+
+                const option = {
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                    grid: [{ left: '6%', right: '4%', top: '5%', height: '65%' }, { left: '6%', right: '4%', top: '78%', height: '15%' }],
+                    xAxis: [{ type: 'category', data: dates, axisLabel: { fontSize: 10 }, gridIndex: 0 },
+                            { type: 'category', data: dates, axisLabel: { show: false }, gridIndex: 1 }],
+                    yAxis: [{ type: 'value', scale: true, gridIndex: 0, splitLine: { lineStyle: { color: '#f0f0f0' } } },
+                            { type: 'value', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } }],
+                    series: [
+                        { name: '收盘价', type: 'line', data: closes, smooth: true,
+                          lineStyle: { color: '#4f46e5', width: 2 },
+                          areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                              colorStops: [{ offset: 0, color: 'rgba(79,70,229,0.3)' }, { offset: 1, color: 'rgba(79,70,229,0.02)' }] } },
+                          xAxisIndex: 0, yAxisIndex: 0 },
+                        { name: '成交量', type: 'bar', data: volumes, xAxisIndex: 1, yAxisIndex: 1,
+                          itemStyle: { color: '#c7d2fe' } }
+                    ],
+                    dataZoom: [{ type: 'inside', xAxisIndex: [0,1] }]
+                };
+                if (!hynixChart) hynixChart = echarts.init(document.getElementById('hynixChart'));
+                hynixChart.setOption(option);
+                window.addEventListener('resize', () => hynixChart?.resize());
+            }
+        }
+
+        function renderSimilar(similar) {
+            const tbody = document.getElementById('similarBody');
+            if (!similar || similar.error || similar.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">暂无数据</td></tr>';
+                return;
+            }
+            let html = '';
+            similar.forEach((item, i) => {
+                const barWidth = Math.min(Math.abs(item.correlation) * 100, 100);
+                const barColor = item.correlation > 0 ? '#4f46e5' : '#dc2626';
+                html += `<tr class="border-b hover:bg-gray-50">
+                    <td class="py-2.5 px-2 text-gray-400">${i+1}</td>
+                    <td class="py-2.5 px-2 font-mono text-xs">${item.code}</td>
+                    <td class="py-2.5 px-2 font-medium">${item.name}</td>
+                    <td class="py-2.5 px-2 text-xs text-gray-400">${item.sector}</td>
+                    <td class="py-2.5 px-2 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <span class="font-mono text-sm ${item.correlation > 0 ? 'text-indigo-600' : 'text-red-600'}">${item.correlation.toFixed(4)}</span>
+                            <div class="w-16 bg-gray-200 rounded-full h-1.5">
+                                <div class="h-1.5 rounded-full" style="width:${barWidth}%;background:${barColor}"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-mono">${item.close.toFixed(2)}</td>
+                    <td class="py-2.5 px-2 text-right font-mono ${pctClass(item.change_pct)}">${fmtPct(item.change_pct)}</td>
+                    <td class="py-2.5 px-2 text-right font-mono ${pctClass(item.change_30d)}">${fmtPct(item.change_30d)}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function refreshAll() {
+            document.getElementById('updateTime').textContent = '刷新中...';
+            fetch('/api/all')
+                .then(r => r.json())
+                .then(data => {
+                    allData = data;
+                    renderMarket(data.market);
+                    renderHynix(data.hynix);
+                    renderSimilar(data.similar);
+                    document.getElementById('updateTime').textContent = '更新: ' + (data.update_time || new Date().toLocaleString());
+                })
+                .catch(e => {
+                    document.getElementById('updateTime').textContent = '加载失败: ' + e.message;
+                });
+        }
+
+        function changePeriod(days) {
+            document.getElementById('periodDisplay').textContent = days;
+            fetch('/api/similar')
+                .then(r => r.json())
+                .then(data => {
+                    if (allData) allData.similar = data;
+                    renderSimilar(data);
+                });
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 60000);
+    </script>
+</body>
+</html>

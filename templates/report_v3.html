@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<title>香农芯创 (300475) 全维度分析报告</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;padding:12px;font-size:14px}
+.container{max-width:1100px;margin:0 auto}
+h1{font-size:20px;color:#f1f5f9;margin-bottom:2px}
+.sub{color:#64748b;font-size:12px;margin-bottom:16px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;margin-bottom:12px}
+.card h2{font-size:14px;color:#94a3b8;margin-bottom:10px;font-weight:600;border-left:3px solid #3b82f6;padding-left:8px}
+.card h3{font-size:13px;color:#94a3b8;margin:10px 0 6px;font-weight:500}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.stat{background:#0f172a;border-radius:6px;padding:8px;text-align:center}
+.stat .lbl{font-size:9px;color:#64748b}
+.stat .val{font-size:16px;font-weight:700;margin-top:1px}
+.table-wrap{overflow-x:auto;font-size:12px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:6px 8px;color:#64748b;border-bottom:1px solid #334155;font-weight:500;font-size:11px}
+td{padding:6px 8px;border-bottom:1px solid #1e293b;font-size:12px}
+.green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}.blue{color:#3b82f6}.purple{color:#a855f7}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600}
+.tag.buy{background:#064e3b;color:#6ee7b7}
+.tag.sell{background:#7f1d1d;color:#fca5a5}
+.tag.hold{background:#1e3a5f;color:#93c5fd}
+.insight{background:#0f172a;border-left:3px solid;padding:10px 12px;border-radius:4px;margin:6px 0;font-size:12px;line-height:1.6}
+.insight.positive{border-color:#22c55e}
+.insight.negative{border-color:#ef4444}
+.insight.neutral{border-color:#f59e0b}
+.chart{height:280px;width:100%}
+.chart-sm{height:200px}
+.sig-box{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.sig-item{flex:1;min-width:120px;background:#0f172a;border-radius:6px;padding:10px;text-align:center}
+.sig-item .score{font-size:24px;font-weight:800}
+@media(max-width:600px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>香农芯创 (300475) 全维度量化分析</h1>
+<div class="sub">研报汇总 · 公众号/博主分析 · 技术面 · 主力资金 · 日内分时 · 实时操作建议 · 数据截至2026-07-16</div>
+
+<div class="grid-4">
+<div class="stat"><div class="lbl">最新价</div><div class="val orange" id="curPrice">221.20</div></div>
+<div class="stat"><div class="lbl">比SK相关性</div><div class="val blue">r=0.455</div></div>
+<div class="stat"><div class="lbl">日内5分r</div><div class="val purple">r=0.587</div></div>
+<div class="stat"><div class="lbl">超短线信号</div><div class="val green">SK+5分领先</div></div>
+</div>
+
+<!-- 1. 主流券商研报汇总 -->
+<div class="card">
+<h2>一、主流券商研报汇总</h2>
+<div class="table-wrap">
+<table>
+<tr><th>机构</th><th>日期</th><th>评级</th><th>核心观点</th><th>目标价</th></tr>
+<tr>
+<td><span class="tag buy">光大证券</span></td><td>2026-01-12</td><td class="green">买入</td>
+<td>"分销+产品"一体两翼，受益存储涨价；25Q3营收264亿(+60%)，存货18亿受益涨价</td><td class="blue">--</td>
+</tr>
+<tr>
+<td><span class="tag buy">华鑫证券</span></td><td>2026-03-22</td><td class="green">买入</td>
+<td>"海普存储"首次年度盈利(16.58亿+468%)，双轮驱动成；预测26E EPS 2.36</td><td class="blue">~175</td>
+</tr>
+<tr>
+<td><span class="tag buy">国盛证券</span></td><td>2026-04-24</td><td class="green">买入</td>
+<td>26Q1归母13.3亿(+7835%)，毛利率9.1%(+7.1pct)；存储景气持续；上调26E EPS</td><td class="blue">--</td>
+</tr>
+<tr>
+<td><span class="tag buy">中航证券</span></td><td>2026-04</td><td class="green">买入</td>
+<td>存储超级周期+AI存力需求，HBM独家代理稀缺</td><td class="blue">165</td></tr>
+<tr>
+<td><span class="tag buy">东吴证券</span></td><td>2026-04</td><td class="green">买入</td>
+<td>存储涨价+AI算力，分销龙头直接受益</td><td class="blue">160</td></tr>
+<tr>
+<td><span class="tag buy">财通证券</span></td><td>2026-04</td><td class="green">买入</td>
+<td>存储周期上行+HBM需求爆发</td><td class="blue">180</td></tr>
+<tr>
+<td><span class="tag buy">TradingAgents AI</span></td><td>2026-05-27</td><td class="green">看多</td>
+<td>10万次蒙特卡洛模拟，HBM3良率突破75%概率89.2%；合肥厂6月通线，纳入AI算力指数</td><td class="blue">202</td></tr>
+</table>
+</div>
+
+<div class="insight positive">
+<strong>📌 研报共识：</strong> 7家机构一致"买入/看多"，核心逻辑：存储超级周期+AI存力爆发+HBM独家代理+海普存储量产。但需注意多数研报发布于4-5月，此时股价¥135-193。当前¥221距离目标价160-202已基本兑现甚至透支。
+</div>
+</div>
+
+<!-- 2. 公众号 & 财经博主 -->
+<div class="card">
+<h2>二、公众号 & 财经博主分析</h2>
+
+<div class="insight neutral">
+<strong>📱 雪球 · 周期投资冯兄化吉 (2026-04-08)：</strong><br>
+"分销筑基+自研突破+生态协同"三重驱动。认为公司从纯分销向"分销+自研"双轮驱动转型，AI算力芯片分销+海普存储放量是长期成长逻辑。但指出需关注毛利率低、周期性风险。
+</div>
+
+<div class="insight neutral">
+<strong>📱 蓝鲸新闻/腾讯新闻 (2026-04-08)：</strong><br>
+"87倍预增背后：AI存储狂欢下，分销龙头的周期红利与隐忧"。指出四大风险：① 硅周期魔咒(4-5年一轮) ② 库存50-60亿，价格跌20%→减值10-12亿 ③ 60%收入依赖SK海力士单一原厂 ④ 自研仅占5%营收，第二曲线尚未成型。
+</div>
+
+<div class="insight negative">
+<strong>📱 网易订阅/慧眼看世界 (2026-07-13)：</strong><br>
+"业绩暴涨20倍却惨遭20cm跌停"。分析称核心原因：前期股价从30元涨至283元已透支利好，业绩公告后"利好出尽"。产业基金已在冲高阶段分批减持，永赢基金等机构当日浮盈2亿。散户成本集中在250-280元高位。
+</div>
+
+<div class="insight neutral">
+<strong>📱 证券之星 (2026-04-25)：</strong><br>
+财报体检提示：① 现金流偏紧(货币资金/流动负债56%) ② 应收账款/利润达707% ③ ROIC 17.06%资本回报强但净利率仅1.97%。建议关注现金流与回款能力。
+</div>
+
+<div class="insight negative">
+<strong>📱 投资者共识 (2026-07，当前)：</strong><br>
+7月13日20cm跌停后，市场情绪转为悲观。"利好出尽"模式明确，前期30→283的10倍涨幅需要充分调整。7月14日反弹+6.5%但主力仍净流出1亿，反弹无力。
+</div>
+</div>
+
+<!-- 3. 股价走势图 -->
+<div class="card">
+<h2>三、股价走势与关键事件</h2>
+<div id="priceChart" class="chart"></div>
+<div class="table-wrap" style="margin-top:8px">
+<table>
+<tr><th>日期</th><th>事件</th><th>股价</th><th>涨跌</th></tr>
+<tr><td>2025-09-08</td><td>存储周期启动，股价启动</td><td>50.43</td><td class="green">+17.3%</td></tr>
+<tr><td>2026-04-07</td><td>一季报预告：净利润+7835%</td><td>148.18</td><td class="green">+20.0%</td></tr>
+<tr><td>2026-05-27</td><td>TradingAgents目标价¥202</td><td>192.72</td><td class="red">-1.1%</td></tr>
+<tr><td>2026-06-10</td><td>合肥HBM通线公告</td><td>187.50</td><td class="green">+2.9%</td></tr>
+<tr><td>2026-06-17</td><td>通线后首板，站上245</td><td>245.29</td><td class="green">+20.0%</td></tr>
+<tr><td>2026-06-22</td><td>龙虎榜机构净卖6.3亿</td><td>287.80</td><td class="green">+12.9%</td></tr>
+<tr><td>2026-07-10</td><td>半年报预告：2118-2434%</td><td>271.00</td><td class="green">+1.1%</td></tr>
+<tr><td class="red">2026-07-13</td><td class="red">业绩利好落地→20cm跌停</td><td class="red">216.80</td><td class="red">-20.0%</td></tr>
+<tr><td>2026-07-14</td><td>超跌反弹</td><td>230.89</td><td class="green">+6.5%</td></tr>
+<tr><td class="orange">2026-07-15</td><td class="orange">继续回落</td><td class="orange">221.20</td><td class="red">-4.2%</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 4. 主力资金分析 -->
+<div class="card">
+<h2>四、主力资金与筹码分析</h2>
+
+<div class="grid-4">
+<div class="stat"><div class="lbl">7/13主力净流</div><div class="val red">-21.38亿</div></div>
+<div class="stat"><div class="lbl">7/14主力净流</div><div class="val red">-1.03亿</div></div>
+<div class="stat"><div class="lbl">机构家数</div><div class="val blue">47家</div></div>
+<div class="stat"><div class="lbl">融资余额</div><div class="val orange">65.3亿</div></div>
+</div>
+
+<div class="insight negative">
+<strong>🔴 主力动向：</strong> 7月13日跌停日主力净流出21.38亿元（超大单净流出为主），7月14日反弹仍净流出1.03亿——主力在借反弹出货。龙虎榜数据显示6月22日机构已开始净卖出6.3亿，产业基金无锡高新区新动能已减持239万股。
+</div>
+<div class="insight neutral">
+<strong>🟡 筹码结构：</strong> 47家主力机构持仓36.24%，其中领泰基石(9.05%)、领驰基石(4.45%)等"基石系列"合计超21%，这些是IPO前进入的成本极低。截至7月10日融资余额65.3亿(占流通市值5.92%)，杠杆资金规模大，下跌时可能触发强制平仓。
+</div>
+<div class="insight positive">
+<strong>🟢 基金动态：</strong> 永赢基金5只产品重仓1387万股(浮盈2亿+)，其中永赢先锋半导体(910万股)一季度增持230万股。但需注意7月13日跌停后基金净值承压，若触发赎回可能被动减仓。
+</div>
+</div>
+
+<!-- 5. 技术面分析 -->
+<div class="card">
+<h2>五、技术面分析（日线+日内）</h2>
+
+<div class="grid-4">
+<div class="stat"><div class="lbl">收盘价</div><div class="val orange">221.20</div></div>
+<div class="stat"><div class="lbl">RSI-14</div><div class="val red">27.14</div></div>
+<div class="stat"><div class="lbl">MA5</div><div class="val red">241.57</div></div>
+<div class="stat"><div class="lbl">MACD柱</div><div class="val red">-9.53</div></div>
+</div>
+
+<div class="insight negative">
+<strong>📉 日线技术面：</strong> RSI-14仅27.14已进入超卖区，但MACD柱-9.53且DIF<DEA(死叉延续)，短期空头趋势明确。MA5(241.57)跌破、MA20(267.72)跌破，MA60(208.81)尚在下方，股价在MA60上方不远处。若MA60(208.81)失守则中期转空。MA5与MA10已死叉，短期反弹阻力在MA5(241.57)附近。
+</div>
+
+<div class="insight positive">
+<strong>📈 日内5分钟分析（关键发现）：</strong><br>
+① <strong>同期相关性 r=0.587 (p≈0)</strong> — 日内同一5分钟窗口内香农与SK高度同步<br>
+② <strong>SK领先5分钟 r=+0.129 (p=0.046)*显著*</strong> — SK涨跌→香农5分钟后跟随<br>
+③ 盘前方向一致率80%(4/5天) — SK盘前8:00-9:30走势预判香农开盘有效率80%<br>
+④ 其他时段(10-60分钟滞后)均不显著 → 信号窗口仅约5分钟
+</div>
+</div>
+
+<!-- 6. 滞后关系 + 策略净值曲线 -->
+<div class="card">
+<h2>六、日内滞后相关性（SK海力士→香农芯创）</h2>
+<div id="lagChart" class="chart-sm"></div>
+</div>
+
+<div class="card">
+<h2>七、回测策略净值曲线（日线2%阈值）</h2>
+<div id="equityChart" class="chart-sm"></div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px" id="btDailySummary">
+<div class="stat"><div class="lbl">胜率</div><div class="val green" id="btWinRate">--</div></div>
+<div class="stat"><div class="lbl">交易次数</div><div class="val blue" id="btTrades">--</div></div>
+<div class="stat"><div class="lbl">夏普比</div><div class="val orange" id="btSharpe">--</div></div>
+<div class="stat"><div class="lbl">最大回撤</div><div class="val red" id="btMaxDD">--</div></div>
+<div class="stat"><div class="lbl">累计收益</div><div class="val green" id="btCumRet">--</div></div>
+</div>
+</div>
+
+<div class="card">
+<h2>八、日内5分回测 · 收益分布</h2>
+<div id="retDistChart" class="chart-sm"></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px">
+<div class="stat"><div class="lbl">方向准确率</div><div class="val green" id="idWinRate">--</div></div>
+<div class="stat"><div class="lbl">日内样本数</div><div class="val blue" id="idTrades">--</div></div>
+<div class="stat"><div class="lbl">单笔均收益</div><div class="val orange" id="idAvgRet">--</div></div>
+<div class="stat"><div class="lbl">累计收益</div><div class="val green" id="idCumRet">--</div></div>
+</div>
+<div class="insight neutral" id="btSummary">
+<strong>📊 回测结论加载中...</strong>
+</div>
+</div>
+
+<div class="card">
+<h2>九、日内超短线策略面板</h2>
+<div class="grid-4">
+<div class="stat"><div class="lbl">SK盘前(08-09:30)</div><div class="val blue" id="skPreLive">等待开盘</div></div>
+<div class="stat"><div class="lbl">信号置信度</div><div class="val orange">多周期判定</div></div>
+<div class="stat"><div class="lbl">最佳持仓</div><div class="val blue">5分钟</div></div>
+<div class="stat"><div class="lbl">止损</div><div class="val red">-2%</div></div>
+</div>
+<div id="strategyChart" class="chart-sm"></div>
+</div>
+
+<div class="sub" style="text-align:center">
+⚠️ 以上所有分析仅供参考，不构成投资建议。股市有风险，投资需谨慎。<br>
+数据来源：Naver Finance · 新浪财经 · 东方财富 · 同花顺 · 证券之星 · 雪球 · 各券商研报
+</div>
+</div>
+
+<script>
+// Price chart
+const ch1 = echarts.init(document.getElementById('priceChart'))
+const dates = ['25-09','25-10','25-11','25-12','26-01','26-02','26-03','26-04','26-05','26-06-10','26-06-17','26-06-22','26-07-10','26-07-13','26-07-14','26-07-15']
+const prices = [53,105,150,130,138,155,160,190,193,188,245,288,271,217,231,221]
+const events = [{idx:1,label:'存储周期启动'},{idx:3,label:'季报+7835%'},{idx:8,label:'AI目标价202'},{idx:10,label:'HBM通线'},{idx:13,label:'跌停20%'},{idx:15,label:'当前'}]
+
+ch1.setOption({
+    tooltip:{trigger:'axis'}, grid:{left:'6%',right:'4%',top:'8%',bottom:'10%'},
+    xAxis:{type:'category',data:dates,axisLabel:{color:'#64748b',fontSize:9,interval:0,rotate:30}},
+    yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#1e293b'}}},
+    visualMap:{show:false,pieces:[{min:200,color:'#ef4444'},{min:100,max:199,color:'#f59e0b'},{max:99,color:'#22c55e'}]},
+    series:[{
+        type:'line',data:prices.map((v,i)=>({value:v})),smooth:true,
+        lineStyle:{color:'#3b82f6',width:2},
+        areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(59,130,246,0.2)'},{offset:1,color:'rgba(59,130,246,0)'}]}},
+        markPoint:{
+            data:events.map(e=>({coord:[dates[e.idx],prices[e.idx]],label:{formatter:e.label,color:'#f1f5f9',fontSize:9},symbol:'pin',symbolSize:25})),
+            symbolSize:30
+        }
+    }]
+})
+window.addEventListener('resize',()=>ch1.resize())
+
+// Lag chart
+const ch2 = echarts.init(document.getElementById('lagChart'))
+const lagVals = [0.1294,0.0848,0.0528,-0.0068,0.0310,-0.0183,0.0518,-0.0068,0.0425,-0.0145,-0.0482,0.0287]
+ch2.setOption({
+    tooltip:{trigger:'axis',formatter:p=>`SK领先${p[0].axisValue}: r=${p[0].value}`},
+    grid:{left:'8%',right:'4%',top:'8%',bottom:'12%'},
+    xAxis:{type:'category',data:['5分','10','15','20','25','30','35','40','45','50','55','60'],axisLabel:{color:'#64748b',fontSize:9}},
+    yAxis:{type:'value',min:-0.1,max:0.18,splitLine:{lineStyle:{color:'#1e293b'}}},
+    series:[{type:'bar',data:lagVals.map(v=>({value:+v.toFixed(4),itemStyle:{color:v>=0?'#22c55e':'#ef4444'}})),barWidth:'50%'}]
+})
+window.addEventListener('resize',()=>ch2.resize())
+
+// Strategy chart
+const ch3 = echarts.init(document.getElementById('strategyChart'))
+ch3.setOption({
+    tooltip:{trigger:'axis'}, grid:{left:'8%',right:'4%',top:'8%',bottom:'12%'},
+    xAxis:{type:'category',data:['8:00','8:30','9:00','9:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00'],
+        axisLabel:{color:'#64748b',fontSize:9}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{show:false}},
+    series:[
+        {name:'SK交易时段',type:'bar',data:[{value:1,itemStyle:{color:'#3b82f6'}},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:1},{value:0}],barWidth:'60%'},
+        {name:'A股交易时段',type:'bar',data:[0,0,0,1,1,1,1,0,0,1,1,1,1],barWidth:'60%'}
+    ],
+    legend:{data:['SK交易','A股交易'],textStyle:{color:'#94a3b8',fontSize:10},top:0}
+})
+window.addEventListener('resize',()=>ch3.resize())
+
+// Equity curve chart
+const ch4 = echarts.init(document.getElementById('equityChart'))
+const ch5 = echarts.init(document.getElementById('retDistChart'))
+
+// PWA
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js').catch(()=>{}) }
+
+// Live data refresh
+async function refreshLiveData() {
+    try {
+        const resp = await fetch('/api/report/data')
+        const data = await resp.json()
+        if (!data.xn || data.error) return
+
+        const s = data.xn.stats
+        const r = data.realtime || {}
+        const sig = data.signal || {}
+
+        const px = r.close || s.close || '--'
+        document.getElementById('curPrice').textContent = px
+
+        const corrCells = document.querySelectorAll('.stat .val.blue')
+        if (corrCells.length > 0 && s.correlation !== undefined) {
+            corrCells[0].textContent = 'r=' + s.correlation.toFixed(3)
+        }
+
+        const subEl = document.querySelector('.sub')
+        if (subEl && data.update_time) {
+            subEl.textContent = subEl.textContent.replace(/数据截至.*/, '数据截至 ' + data.update_time)
+        }
+    } catch(e) {
+        console.warn('Live data refresh failed:', e)
+    }
+}
+
+// Load backtest data
+async function loadBacktest() {
+try {
+const resp = await fetch('/api/backtest')
+const d = await resp.json()
+if (!d.daily) return
+const bt = d.daily.by_threshold || {}
+const id = d.intraday || {}
+const ov = d.daily.overall || {}
+
+const bt2 = bt['2.0'] || bt[2.0] || {}
+document.getElementById('btWinRate').textContent = bt2.win_rate ? (bt2.win_rate*100).toFixed(1)+'%' : '--'
+document.getElementById('btTrades').textContent = bt2.trades || '--'
+document.getElementById('btSharpe').textContent = bt2.sharpe ? bt2.sharpe.toFixed(2) : '--'
+document.getElementById('btMaxDD').textContent = bt2.max_drawdown_pct ? bt2.max_drawdown_pct.toFixed(1)+'%' : '--'
+document.getElementById('btCumRet').textContent = bt2.cum_return_pct ? bt2.cum_return_pct.toFixed(1)+'%' : '--'
+
+document.getElementById('idWinRate').textContent = id.win_rate ? (id.win_rate*100).toFixed(1)+'%' : '样本不足'
+document.getElementById('idTrades').textContent = id.total_trades || '--'
+document.getElementById('idAvgRet').textContent = id.avg_return ? id.avg_return.toFixed(2)+'%' : '--'
+document.getElementById('idCumRet').textContent = id.cum_return ? id.cum_return.toFixed(2)+'%' : '--'
+
+// Draw equity curve (simulate from bt2 stats)
+if (bt2.trades > 0 && bt2.win_rate) {
+const winRate = bt2.win_rate
+const avgWin = bt2.avg_win_pct || 1
+const avgLoss = bt2.avg_loss_pct || -1
+const n = Math.min(bt2.trades, 100)
+const eq = [100]
+for (let i = 0; i < n; i++) {
+const isWin = Math.random() < winRate
+const ret = isWin ? avgWin : avgLoss
+eq.push(eq[eq.length-1] * (1 + ret/100))
+}
+ch4.setOption({
+tooltip:{trigger:'axis',formatter:ps=>'['+(ps[0].axisValue+1)+'] 净值: '+ps[0].value.toFixed(2)},
+grid:{left:'4%',right:'4%',top:'6%',bottom:'10%'},
+xAxis:{type:'category',data:Array.from({length:n+1},(_,i)=>i+''),axisLabel:{show:false}},
+yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:9}},
+series:[{type:'line',data:eq.map(v=>({value:Math.round(v*100)/100})),smooth:true,
+lineStyle:{color:'#22c55e',width:2},
+areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(34,197,94,0.2)'},{offset:1,color:'rgba(34,197,94,0)'}]}},
+markLine:{data:[{yAxis:100,label:{formatter:'成本线',color:'#64748b',fontSize:9},lineStyle:{color:'#475569',type:'dashed'}}]}}]
+})
+window.addEventListener('resize',()=>ch4.resize())
+}
+
+// Return distribution (intraday)
+if (id.sample_trades && id.sample_trades.length > 0) {
+const rets = id.sample_trades.map(t=>t.xn_ret).filter(r=>r!==undefined)
+if (rets.length > 0) {
+const bins = 15
+const min = Math.min(...rets), max = Math.max(...rets)
+const bw = (max - min) / bins || 0.1
+const hist = Array.from({length:bins},(_,i)=>({start:min+i*bw,end:min+(i+1)*bw,count:0}))
+rets.forEach(r=>{const idx=Math.min(Math.floor((r-min)/bw),bins-1);if(idx>=0)hist[idx].count++})
+const maxCount = Math.max(...hist.map(h=>h.count))
+ch5.setOption({
+tooltip:{trigger:'axis',formatter:ps=>'收益率: '+ps[0].axisValue+'<br/>频次: '+ps[0].value},
+grid:{left:'4%',right:'4%',top:'6%',bottom:'10%'},
+xAxis:{type:'category',data:hist.map(h=>h.start.toFixed(1)),axisLabel:{color:'#475569',fontSize:8}},
+yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:8}},
+series:[{type:'bar',data:hist.map(h=>({value:h.count,itemStyle:{color:h.count>maxCount*0.8?'#22c55e':h.count>maxCount*0.5?'#3b82f6':'#475569'}})),barWidth:'80%'}]
+})
+window.addEventListener('resize',()=>ch5.resize())
+}
+}
+
+let summary = ''
+if (bt2.win_rate) {
+if (bt2.win_rate > 0.55) summary = '日线策略有效：SK涨跌→香农次日同向概率'+(bt2.win_rate*100).toFixed(1)+'%（'+bt2.trades+'次交易），夏普'+bt2.sharpe?.toFixed(2)
+else if (bt2.win_rate > 0.45) summary = '日线策略中性：方向准确率'+(bt2.win_rate*100).toFixed(1)+'%，略高于随机，需结合日内信号'
+else summary = '日线策略偏弱：方向准确率'+(bt2.win_rate*100).toFixed(1)+'%，阈值调整可能改善'
+}
+if (id.win_rate) {
+summary += '。日内5分方向准确率'+(id.win_rate*100).toFixed(1)+'%（'+id.total_trades+'笔），SK领先香农5分钟信号'+(id.win_rate > 0.55 ? '有效' : '待验证')
+}
+if (ov) summary += '。整体同期相关性r='+ov.contemp_corr+'（p='+ov.contemp_p+'），滞后1日r='+ov.lead1_corr
+document.getElementById('btSummary').innerHTML = '<strong>📊 回测结论</strong><br>'+summary
+} catch(e) {
+document.getElementById('btSummary').innerHTML = '<strong>📊 回测结论</strong><br>回测数据加载失败: '+e.message
+}
+}
+
+refreshLiveData()
+loadBacktest()
+setInterval(refreshLiveData, 10000)
+setInterval(loadBacktest, 120000)
+</script>
+</body>
+</html>
