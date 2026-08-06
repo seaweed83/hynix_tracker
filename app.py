@@ -1977,6 +1977,62 @@ PAIRS = {
         "follow": {"code": "sh603986", "src": "tx_a", "name": "兆易创新", "mkt": "A股上海"},
         "relation": "美光与兆易创新同处存储周期",
     },
+    "nvda_fii": {
+        "name": "英伟达 → 工业富联",
+        "desc": "AI服务器ODM直接传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sh601138", "src": "tx_a", "name": "工业富联", "mkt": "A股上海"},
+        "relation": "工业富联是英伟达GB200/GB300核心代工厂",
+    },
+    "nvda_innolight": {
+        "name": "英伟达 → 中际旭创",
+        "desc": "光模块龙头直接传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz300308", "src": "tx_a", "name": "中际旭创", "mkt": "A股创业板"},
+        "relation": "中际旭创800G/1.6T光模块全球主力供货",
+    },
+    "nvda_shenghong": {
+        "name": "英伟达 → 胜宏科技",
+        "desc": "PCB一级供应商传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz300476", "src": "tx_a", "name": "胜宏科技", "mkt": "A股创业板"},
+        "relation": "胜宏科技78层正交Midplane背板独家供货",
+    },
+    "nvda_eoptolink": {
+        "name": "英伟达 → 新易盛",
+        "desc": "光模块业绩兑现传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz300502", "src": "tx_a", "name": "新易盛", "mkt": "A股创业板"},
+        "relation": "新易盛高速光模块主力，2026H1净利预增77%~103%",
+    },
+    "nvda_envicool": {
+        "name": "英伟达 → 英维克",
+        "desc": "液冷NPN Tier1直接传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz002837", "src": "tx_a", "name": "英维克", "mkt": "A股创业板"},
+        "relation": "英维克是大陆唯一英伟达NPN Tier1液冷服务商",
+    },
+    "nvda_megmeet": {
+        "name": "英伟达 → 麦格米特",
+        "desc": "电源官方认证直接传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz002851", "src": "tx_a", "name": "麦格米特", "mkt": "A股创业板"},
+        "relation": "麦格米特是A股唯一英伟达官方认证电源供应商",
+    },
+    "nvda_wus": {
+        "name": "英伟达 → 沪电股份",
+        "desc": "PCB算力板料认证传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz002463", "src": "tx_a", "name": "沪电股份", "mkt": "A股创业板"},
+        "relation": "沪电股份AI服务器PCB算力板料过英伟达认证",
+    },
+    "nvda_luxshare": {
+        "name": "英伟达 → 立讯精密",
+        "desc": "高速铜缆NVLink传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "sz002475", "src": "tx_a", "name": "立讯精密", "mkt": "A股创业板"},
+        "relation": "立讯精密224G铜缆批量供货北美头部客户",
+    },
 }
 
 
