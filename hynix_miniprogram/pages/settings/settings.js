@@ -3,7 +3,7 @@ const api = require('../../utils/api')
 
 Page({
   data: {
-    serverUrl: 'https://generator-speech-impression-screenshots.trycloudflare.com',
+    serverUrl: 'https://cocktail-suffering-behaviour-prepare.trycloudflare.com',
     status: ''
   },
 
