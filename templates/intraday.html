@@ -58,6 +58,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rule-box{background:#1e293b;border-radius:12px;margin:8px 12px 24px;padding:14px;font-size:12px;color:#94a3b8;line-height:1.9;border:1px solid #334155}
 .rule-box strong{color:#e2e8f0}
 .green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}.blue{color:#3b82f6}.purple{color:#a855f7}
+.pair-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#0f172a;border-bottom:1px solid #1e293b}
+.pair-bar select{flex:1;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:13px;appearance:none;-webkit-appearance:none}
+.pair-bar select:focus{outline:none;border-color:#3b82f6}
+.pair-stats{background:#1e293b;border-radius:12px;margin:6px 12px;padding:12px;border:1px solid #334155}
+.pair-stats .pt{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+.pair-stats .pg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pair-stats .pi{text-align:center;background:#0b1120;border-radius:8px;padding:8px}
+.pair-stats .pi .l{font-size:8px;color:#64748b}
+.pair-stats .pi .v{font-size:14px;font-weight:700}
+.pair-stats .prel{font-size:9px;color:#475569;margin-top:8px;line-height:1.6}
 ::-webkit-scrollbar{height:2px;width:2px}
 ::-webkit-scrollbar-track{background:#0b1120}
 ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
@@ -66,8 +76,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <body>
 
 <div class="top">
-<div class="t">⚡ SK→XN 实时联动</div>
+<div class="t">⚡ 跨境联动信号</div>
 <div class="ts" id="timeDisplay">--:--:--</div>
+</div>
+
+<div class="pair-bar">
+<select id="pairSelect" onchange="selectPair(this.value)">
+<option value="">加载联动对...</option>
+</select>
+</div>
+
+<div class="pair-stats" id="pairStats" style="display:none">
+<div class="pt">📊 联动对分析 · <span id="pairName" style="font-weight:700;color:#f1f5f9"></span></div>
+<div class="pg">
+<div class="pi"><div class="l">相关性</div><div class="v blue" id="psCorr">--</div></div>
+<div class="pi"><div class="l">最优滞后</div><div class="v orange" id="psLag">--</div></div>
+<div class="pi"><div class="l">滞后r值</div><div class="v purple" id="psLagR">--</div></div>
+<div class="pi"><div class="l">协整z</div><div class="v green" id="psZ">--</div></div>
+</div>
+<div class="prel" id="psRel">--</div>
 </div>
 
 <div id="hero" class="hero hold">
@@ -80,18 +107,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div class="pr">
 <div class="prc">
-<div class="l"><span>🇰🇷 SK Hynix</span><span id="skDataPts" style="color:#475569"></span></div>
-<div class="flag" id="skFlag">⚪</div>
-<div class="p blue" id="skPrice">--</div>
-<div class="c" id="skChange">--</div>
-<div class="s" id="skSub">--</div>
+<div class="l"><span id="leadLabel">🇰🇷 SK Hynix</span><span id="leadDataPts" style="color:#475569"></span></div>
+<div class="flag" id="leadFlag">⚪</div>
+<div class="p blue" id="leadPrice">--</div>
+<div class="c" id="leadChange">--</div>
+<div class="s" id="leadSub">--</div>
 </div>
 <div class="prc">
-<div class="l"><span>🇨🇳 香农芯创</span><span style="color:#475569">实时</span></div>
-<div class="flag" id="xnFlag">⚪</div>
-<div class="p blue" id="xnPrice">--</div>
-<div class="c" id="xnChange">--</div>
-<div class="s" id="xnSub">--</div>
+<div class="l"><span id="followLabel">🇨🇳 香农芯创</span><span style="color:#475569">实时</span></div>
+<div class="flag" id="followFlag">⚪</div>
+<div class="p blue" id="followPrice">--</div>
+<div class="c" id="followChange">--</div>
+<div class="s" id="followSub">--</div>
 </div>
 </div>
 
@@ -155,8 +182,65 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
-let prevSig = 'hold', sigHistory = []
+let prevSig = 'hold', sigHistory = [], currentPair = 'sk_xn', pairs = {}
 let priceChart = null, volChart = null
+
+function loadPairs() {
+fetch('/api/pairs').then(r=>r.json()).then(d=>{
+if(d.error||!d.pairs)return
+pairs={}
+const sel=document.getElementById('pairSelect')
+let opts=''
+d.pairs.forEach(p=>{
+pairs[p.id]=p
+opts+=`<option value="${p.id}">${p.name}</option>`
+})
+sel.innerHTML=opts
+// 恢复上次选择
+const saved=localStorage.getItem('pairId')
+if(saved&&pairs[saved]){sel.value=saved;currentPair=saved}
+selectPair(sel.value)
+}).catch(()=>{})
+}
+
+function selectPair(id){
+currentPair=id
+localStorage.setItem('pairId',id)
+const p=pairs[id]
+if(!p)return
+// 更新标签
+const mktFlag={KOSPI:'🇰🇷',NASDAQ:'🇺🇸',NYSE:'🇺🇸',A股上海:'🇨🇳','A股创业板':'🇨🇳',港股:'🇭🇰'}
+document.getElementById('leadLabel').textContent=(mktFlag[p.lead.mkt]||'')+' '+p.lead.name
+document.getElementById('followLabel').textContent=(mktFlag[p.follow.mkt]||'')+' '+p.follow.name
+// 更新文档标题
+document.title=p.name+' 实时联动信号'
+// 加载Pair分析数据
+fetch(`/api/pair/${id}`).then(r=>r.json()).then(d=>{
+if(d.error){document.getElementById('pairStats').style.display='none';return}
+const s=d.stats,c=d.cointegration
+document.getElementById('pairStats').style.display='block'
+document.getElementById('pairName').textContent=d.pair_name
+document.getElementById('psCorr').textContent=s.correlation.toFixed(3)
+const lag=s.best_lag||0
+document.getElementById('psLag').textContent=lag===0?'同频':'+'+lag+'天'
+document.getElementById('psLagR').textContent=s.best_lag_r.toFixed(3)
+const z=c.z_score||0
+const zEl=document.getElementById('psZ')
+zEl.textContent=z.toFixed(2)
+zEl.className='v '+(z<-2?'green':z>2?'red':'')
+document.getElementById('psRel').textContent='🔗 '+d.relation
+// 更新价格卡片
+const leadChange=document.getElementById('leadChange'),followChange=document.getElementById('followChange')
+document.getElementById('leadPrice').textContent=s.lead_close.toLocaleString()
+leadChange.textContent=(s.lead_change_pct>=0?'+':'')+s.lead_change_pct.toFixed(2)+'%'
+leadChange.className='c '+(s.lead_change_pct>=0?'green':'red')
+document.getElementById('leadSub').textContent=p.lead.name+' · '+p.lead.mkt
+document.getElementById('followPrice').textContent=s.follow_close.toFixed(2)
+followChange.textContent=(s.follow_change_pct>=0?'+':'')+s.follow_change_pct.toFixed(2)+'%'
+followChange.className='c '+(s.follow_change_pct>=0?'green':'red')
+document.getElementById('followSub').textContent=p.follow.name+' · '+p.follow.mkt
+}).catch(()=>{})
+}
 
 function initCharts() {
 priceChart = echarts.init(document.getElementById('priceChart'))
@@ -217,22 +301,22 @@ el.innerHTML=sigHistory.map(s=>`<div class="sh-dot ${s==='buy'?'b':s==='sell'?'s
 function updatePrices(data){
 const sig=data.signal,xn=data.xn
 if(sig){
-document.getElementById('skPrice').textContent=(sig.sk_latest||0).toLocaleString()
-document.getElementById('skDataPts').textContent=sig.sk_data_points+'点'
+document.getElementById('leadPrice').textContent=(sig.sk_latest||0).toLocaleString()
+document.getElementById('leadDataPts').textContent=sig.sk_data_points+'点'
 const ret=sig.sk_last_5min_ret||0
-const el=document.getElementById('skChange')
+const el=document.getElementById('leadChange')
 el.textContent=(ret>=0?'+':'')+ret.toFixed(2)+'%'
 el.className='c '+(ret>=0?'green':'red')
-document.getElementById('skSub').textContent=`30分: ${sig.sk_last_30min_ret>0?'+':''}${(sig.sk_last_30min_ret||0).toFixed(2)}%`
+document.getElementById('leadSub').textContent=`30分: ${sig.sk_last_30min_ret>0?'+':''}${(sig.sk_last_30min_ret||0).toFixed(2)}%`
 }
 if(xn){
 const px=xn.close||0
-document.getElementById('xnPrice').textContent=px.toFixed(2)
+document.getElementById('followPrice').textContent=px.toFixed(2)
 const ch=xn.change_pct||0
-const el=document.getElementById('xnChange')
+const el=document.getElementById('followChange')
 el.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'%'
 el.className='c '+(ch>=0?'green':'red')
-document.getElementById('xnSub').textContent=`开:${(xn.open||0).toFixed(2)} 高:${(xn.high||0).toFixed(2)} 低:${(xn.low||0).toFixed(2)}`
+document.getElementById('followSub').textContent=`开:${(xn.open||0).toFixed(2)} 高:${(xn.high||0).toFixed(2)} 低:${(xn.low||0).toFixed(2)}`
 }
 if(sig){
 const vr=sig.sk_vol_ratio||1
@@ -317,6 +401,7 @@ tbl.innerHTML=html
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/static/sw.js').catch(()=>{})
 initCharts()
+loadPairs()
 fetchBT()
 fetchRT()
 fetchSigHistory()
