@@ -136,8 +136,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="pt">🌐 全部联动对一览 <span class="refresh" id="ovTime">--</span></div>
 <table id="ovTable">
 <thead><tr><th>联动对</th><th>相关性</th><th>最优lag</th><th>z值</th><th>跟随方涨跌</th></tr></thead>
-<tbody id="ovBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
+ <tbody id="ovBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
 </table>
+</div>
+
+<div class="pairs-overview" id="paperPanel" style="display:none">
+<div class="pt">🎯 模拟盘命中率 <span class="refresh" id="paperTime">--</span></div>
+<div class="pg" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+<div class="pi"><div class="l">信号后1日</div><div class="v" id="ppD1">--</div></div>
+<div class="pi"><div class="l">信号后3日</div><div class="v" id="ppD3">--</div></div>
+<div class="pi"><div class="l">信号后5日</div><div class="v" id="ppD5">--</div></div>
+</div>
+<div class="prel" id="ppDetail" style="margin-top:6px">--</div>
 </div>
 
 <div id="hero" class="hero hold">
@@ -284,6 +294,24 @@ return `<tr class="clickable" onclick="selectPairFromList('${r.pair_id}')">
  function selectPairFromList(id){
 document.getElementById('pairSelect').value=id
 selectPair(id)
+}
+
+function loadPaper(){
+fetch('/api/paper/stats?limit=50').then(r=>r.json()).then(d=>{
+if(d.error)return
+const hr=d.hit_rate
+document.getElementById('paperPanel').style.display='block'
+const now=new Date(),ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
+document.getElementById('paperTime').textContent=ts
+const fmt=(x)=>x&&x.n?`${x.rate}% (${x.hit}/${x.n})`:'待评估'
+document.getElementById('ppD1').textContent=fmt(hr.d1)
+document.getElementById('ppD3').textContent=fmt(hr.d3)
+document.getElementById('ppD5').textContent=fmt(hr.d5)
+document.getElementById('ppD1').className='v '+(hr.d1&&hr.d1.rate!==null?(hr.d1.rate>=50?'green':'red'):'')
+document.getElementById('ppD3').className='v '+(hr.d3&&hr.d3.rate!==null?(hr.d3.rate>=50?'green':'red'):'')
+document.getElementById('ppD5').className='v '+(hr.d5&&hr.d5.rate!==null?(hr.d5.rate>=50?'green':'red'):'')
+document.getElementById('ppDetail').textContent=`共记录 ${d.count} 次信号 · 自动记录|z|≥1.5的强信号`
+}).catch(()=>{})
 }
 
 function heatColor(pct){
@@ -570,6 +598,7 @@ initCharts()
 loadPairs()
 loadHeat()
 loadOverview()
+loadPaper()
 fetchBT()
 fetchRT()
 fetchSigHistory()

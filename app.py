@@ -2323,6 +2323,13 @@ def api_pairs():
 def api_pair(pair_id):
     """按Pair ID分析单个跨境联动对"""
     data = analyze_pair(pair_id)
+    if "error" not in data:
+        z = data["cointegration"].get("z_score", 0)
+        if abs(z) >= 1.5:
+            sig = "buy" if z < 0 else "sell"
+            _save_paper_trade(pair_id, sig, z,
+                              data["stats"]["follow_close"],
+                              data["stats"]["follow_change_pct"])
     return jsonify(data)
 
 
