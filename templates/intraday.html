@@ -83,6 +83,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pairs-overview .badge.buy{background:#064e3b;color:#4ade80}
 .pairs-overview .badge.sell{background:#7f1d1d;color:#f87171}
 .pairs-overview .badge.watch{background:#78350f;color:#fbbf24}
+.heat-panel{background:#1e293b;border-radius:12px;margin:6px 12px;padding:12px;border:1px solid #334155}
+.heat-panel .ht{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.heat-panel .heat-score{font-size:20px;font-weight:900;margin-bottom:8px}
+.heat-panel .heat-score.hot{color:#ef4444}
+.heat-panel .heat-score.neutral{color:#f59e0b}
+.heat-panel .heat-score.cool{color:#3b82f6}
+.heat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.heat-cell{border-radius:8px;padding:7px 5px;text-align:center;background:#0b1120;min-height:44px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform 0.15s}
+.heat-cell:active{transform:scale(0.95)}
+.heat-cell .hc-name{font-size:9px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.heat-cell .hc-pct{font-size:12px;font-weight:700}
+.heat-cell .hc-sign{font-size:7px;color:#64748b;margin-top:1px}
+.heat-sector{font-size:9px;color:#475569;margin:8px 0 4px;font-weight:600;display:flex;align-items:center;gap:5px}
+.heat-sector::before{content:'';width:3px;height:10px;background:#f59e0b;border-radius:2px}
 ::-webkit-scrollbar{height:2px;width:2px}
 ::-webkit-scrollbar-track{background:#0b1120}
 ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
@@ -110,6 +124,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="pi"><div class="l">协整z</div><div class="v green" id="psZ">--</div></div>
 </div>
 <div class="prel" id="psRel">--</div>
+</div>
+
+<div class="heat-panel" id="heatPanel">
+<div class="ht">🔥 英伟达产业链温度计 <span class="refresh" id="heatTime">--</span></div>
+<div class="heat-score" id="heatScore">--</div>
+<div id="heatBody"><div style="text-align:center;color:#475569;font-size:10px;padding:12px">加载中...</div></div>
 </div>
 
 <div class="pairs-overview" id="pairsOverview">
@@ -251,9 +271,54 @@ return `<tr class="clickable" onclick="selectPairFromList('${r.pair_id}')">
 }).catch(()=>{})
 }
 
-function selectPairFromList(id){
+ function selectPairFromList(id){
 document.getElementById('pairSelect').value=id
 selectPair(id)
+}
+
+function heatColor(pct){
+const clamp=Math.max(-5,Math.min(5,pct||0))
+const t=clamp/5
+if(t>=0){
+const r=239,g=Math.round(68+(34-68)*(t+1)/2),b=Math.round(68+(197-68)*(t+1)/2)
+return `rgb(${r},${g},${b})`
+}else{
+const r=Math.round(59+(239-59)*(t+1)/2),g=Math.round(130+(68-130)*(t+1)/2),b=Math.round(246+(68-246)*(t+1)/2)
+return `rgb(${r},${g},${b})`
+}
+}
+
+function loadHeat(){
+fetch('/api/heat').then(r=>r.json()).then(d=>{
+if(d.error)return
+const now=new Date(),ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
+document.getElementById('heatTime').textContent=ts
+const score=d.heat_score
+const se=document.getElementById('heatScore')
+se.textContent=(score>=0?'+':'')+score.toFixed(1)+'° 产业链'+(score>1.5?'🔥 热':score<-1.5?'🧊 冷':'➖ 中性')
+se.className='heat-score '+d.heat_level
+let html=''
+Object.entries(d.sectors).forEach(([sector,pids])=>{
+const valid=pids.filter(p=>d.pairs[p]&&d.pairs[p].rt_change_pct!==undefined&&d.pairs[p].rt_change_pct!==null)
+if(!valid.length)return
+html+=`<div class="heat-sector">${sector}</div><div class="heat-grid">`
+valid.forEach(pid=>{
+const p=d.pairs[pid]
+const pct=p.rt_change_pct
+const z=p.z_score
+let sign=''
+if(z<-2)sign='🟢强买'
+else if(z>2)sign='🔴强卖'
+else if(Math.abs(z)>1.5)sign='🟡关注'
+html+=`<div class="heat-cell" style="background:${heatColor(pct)}" onclick="selectPairFromList('${pid}')">
+<div class="hc-name">${p.follow_name}</div>
+<div class="hc-pct">${(pct>=0?'+':'')+pct.toFixed(1)}%</div>
+<div class="hc-sign">${sign}</div></div>`
+})
+html+='</div>'
+})
+document.getElementById('heatBody').innerHTML=html
+}).catch(()=>{})
 }
 
 function selectPair(id){
@@ -455,6 +520,7 @@ tbl.innerHTML=html
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/static/sw.js').catch(()=>{})
 initCharts()
 loadPairs()
+loadHeat()
 loadOverview()
 fetchBT()
 fetchRT()
@@ -463,6 +529,7 @@ setInterval(fetchRT,10000)
 setInterval(fetchBT,120000)
 setInterval(fetchSigHistory,30000)
 setInterval(loadOverview,600000)
+setInterval(loadHeat,30000)
 </script>
 </body>
 </html>

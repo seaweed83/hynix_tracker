@@ -79,7 +79,8 @@ def _save_signal(signal_data):
 for var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
     os.environ.pop(var, None)
 
-_cache = {"market": None, "market_time": 0, "market_ttl": 600}
+_cache = {"market": None, "market_time": 0, "market_ttl": 600,
+          "quotes": None, "quotes_time": 0, "quotes_ttl": 20}
 CANDIDATE_STOCKS = [
     ("603986", "兆易创新", "半导体"),
     ("688008", "澜起科技", "半导体"),
@@ -236,6 +237,40 @@ def _report_signal(xn_stats, hynix_data, intraday_corr=None):
             "resistance_strong": round(ma20 or close * 1.1, 2),
         }
     }
+
+
+def get_realtime_quotes():
+    """A股盘中实时行情(腾讯spot, 20s缓存) → {code6: {...}}"""
+    now = time.time()
+    if _cache["quotes"] and (now - _cache["quotes_time"]) < _cache["quotes_ttl"]:
+        return _cache["quotes"]
+    result = {}
+    try:
+        df = ak.stock_zh_a_spot()
+        if df is not None and not df.empty:
+            df = df.copy()
+            df['code6'] = df['代码'].str[-6:]
+            for _, r in df.iterrows():
+                try:
+                    result[r['code6']] = {
+                        "code": r['code6'],
+                        "name": r['名称'],
+                        "price": round(float(r['最新价']), 2),
+                        "change_pct": round(float(r['涨跌幅']), 2),
+                        "open": round(float(r['今开']), 2),
+                        "high": round(float(r['最高']), 2),
+                        "low": round(float(r['最低']), 2),
+                        "volume": float(r['成交量']),
+                        "amount": float(r['成交额']),
+                        "time": str(r['时间戳']),
+                    }
+                except Exception:
+                    continue
+        _cache["quotes"] = result
+        _cache["quotes_time"] = time.time()
+    except Exception as e:
+        result["error"] = str(e)[:80]
+    return result
 
 
 def get_market_overview():
@@ -2254,6 +2289,22 @@ def api_pair(pair_id):
     return jsonify(data)
 
 
+@app.route('/api/quotes')
+def api_quotes():
+    """A股关注股票实时行情"""
+    q = get_realtime_quotes()
+    if "error" in q:
+        return jsonify({"error": q["error"]})
+    watch = {}
+    for pid, p in PAIRS.items():
+        c = p["follow"]["code"]
+        if c.startswith(("sz", "sh")):
+            c6 = c[2:]
+            if c6 in q:
+                watch[pid] = {"follow": p["follow"]["name"], "quote": q[c6]}
+    return jsonify({"watch": watch, "quotes": q, "count": len(watch)})
+
+
 @app.route('/api/pairs/summary')
 def api_pairs_summary():
     """所有Pair的汇总对比"""
@@ -2283,6 +2334,72 @@ def api_pairs_summary():
             except Exception as e:
                 results[pid] = {"error": str(e)[:80]}
     return jsonify(results)
+
+
+SECTOR_MAP = {
+    "HBM/存储": ["sk_xn", "mu_giga"],
+    "AI服务器/ODM": ["nvda_fii"],
+    "光模块": ["nvda_innolight", "nvda_eoptolink"],
+    "PCB": ["nvda_shenghong", "nvda_wus"],
+    "液冷": ["nvda_envicool"],
+    "电源": ["nvda_megmeet"],
+    "连接器": ["nvda_luxshare"],
+    "晶圆代工": ["nvda_smic", "tsm_smic"],
+    "封测": ["sk_cjec"],
+}
+
+
+@app.route('/api/heat')
+def api_heat():
+    """板块温度计: 每个Pair实时热度 + 产业链综合热度"""
+    import concurrent.futures
+    quotes = get_realtime_quotes()
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(analyze_pair, pid): pid for pid in PAIRS}
+        for fut in concurrent.futures.as_completed(futures):
+            pid = futures[fut]
+            try:
+                d = fut.result()
+                if "error" not in d:
+                    q = {}
+                    fc = d["follow"]["code"]
+                    if fc.startswith(("sz", "sh")) and fc[2:] in quotes:
+                        q = quotes[fc[2:]]
+                    results[pid] = {
+                        "pair_id": pid,
+                        "pair_name": d["pair_name"],
+                        "sector": next((s for s, pids in SECTOR_MAP.items() if pid in pids), "其他"),
+                        "correlation": d["stats"]["correlation"],
+                        "best_lag": d["stats"]["best_lag"],
+                        "z_score": d["cointegration"].get("z_score", 0),
+                        "lead_name": d["lead"]["name"],
+                        "lead_close": d["stats"]["lead_close"],
+                        "lead_change_pct": d["stats"]["lead_change_pct"],
+                        "follow_name": d["follow"]["name"],
+                        "follow_close": d["stats"]["follow_close"],
+                        "follow_change_pct": d["stats"]["follow_change_pct"],
+                        "rt_price": q.get("price"),
+                        "rt_change_pct": q.get("change_pct"),
+                        "rt_time": q.get("time"),
+                    }
+            except Exception:
+                continue
+    # 综合热度 = 加权平均 (相关性权重 * 跟随方实时涨跌)
+    heat_items = [r for r in results.values() if r["rt_change_pct"] is not None]
+    if heat_items:
+        w_sum = sum(abs(r["correlation"]) + 0.3 for r in heat_items)
+        heat_score = sum(r["rt_change_pct"] * (abs(r["correlation"]) + 0.3) for r in heat_items) / w_sum
+    else:
+        heat_score = 0
+    heat_level = "hot" if heat_score > 1.5 else ("cool" if heat_score < -1.5 else "neutral")
+    return jsonify({
+        "heat_score": round(heat_score, 2),
+        "heat_level": heat_level,
+        "sectors": {s: [pid for pid in pids if pid in results] for s, pids in SECTOR_MAP.items()},
+        "pairs": results,
+        "count": len(results),
+    })
 
 
 @app.route('/')
