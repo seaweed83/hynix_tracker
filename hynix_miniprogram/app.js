@@ -1,6 +1,6 @@
 App({
   globalData: {
-    serverUrl: 'https://cocktail-suffering-behaviour-prepare.trycloudflare.com',
+    serverUrl: 'https://ought-aurora-shapes-fraser.trycloudflare.com',
     signalData: null,
     backtestData: null,
     refreshTimer: null

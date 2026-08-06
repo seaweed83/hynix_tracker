@@ -3,7 +3,7 @@ const api = require('../../utils/api')
 
 Page({
   data: {
-    serverUrl: 'https://cocktail-suffering-behaviour-prepare.trycloudflare.com',
+    serverUrl: 'https://ought-aurora-shapes-fraser.trycloudflare.com',
     status: ''
   },
 
