@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="野人哥(全网同名·情绪量化ACB交易系统)作品情绪与大A指数关联度分析">
+<title>野人哥情绪量化 · 指数关联度分析</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b1120;color:#e2e8f0;padding-bottom:40px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:0;z-index:10}
+.top .t{font-size:15px;font-weight:700;color:#f1f5f9}
+.top .ts{font-family:monospace;font-size:10px;color:#64748b}
+.hero{background:linear-gradient(180deg,#1e3a5f40,#0b1120);padding:20px 16px 14px}
+.hero .tag{font-size:10px;color:#64748b;margin-bottom:6px;letter-spacing:1px}
+.hero .name{font-size:24px;font-weight:800;color:#f1f5f9}
+.hero .desc{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.6}
+.card{background:#1e293b;border-radius:12px;margin:10px 12px;padding:14px;border:1px solid #334155}
+.card .ct{font-size:11px;color:#94a3b8;margin-bottom:10px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.card .ct .sub{font-size:9px;color:#475569;font-weight:400}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.gi{text-align:center;background:#0b1120;border-radius:8px;padding:10px 6px}
+.gi .l{font-size:9px;color:#64748b}
+.gi .v{font-size:16px;font-weight:700;margin-top:3px}
+.gi .s{font-size:8px;color:#475569;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{color:#64748b;font-weight:600;text-align:right;padding:6px 4px;border-bottom:1px solid #334155;font-size:9px}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px 4px;border-bottom:1px solid #0b1120;color:#cbd5e1}
+tr:last-child td{border-bottom:none}
+.green{color:#22c55e}.red{color:#ef4444}.orange{color:#f59e0b}.blue{color:#3b82f6}.purple{color:#a855f7}.gray{color:#64748b}
+.badge{font-size:8px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:4px}
+.badge.buy{background:#064e3b;color:#22c55e}
+.badge.sell{background:#7f1d1d;color:#ef4444}
+.badge.watch{background:#1e293b;color:#f59e0b}
+.chart{height:200px;width:100%}
+.chart-sm{height:150px;width:100%}
+.note{font-size:10px;color:#475569;line-height:1.7;background:#0b1120;border-radius:8px;padding:10px;margin-top:8px}
+.note strong{color:#e2e8f0}
+.yr-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #0b1120}
+.yr-item:last-child{border-bottom:none}
+.yr-item .yd{font-size:9px;color:#475569;width:56px;flex-shrink:0}
+.yr-item .yt{flex:1;font-size:10px;color:#cbd5e1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.yr-badge{font-size:8px;padding:2px 6px;border-radius:4px;flex-shrink:0;font-weight:700}
+.yr-badge.bull{background:#064e3b;color:#22c55e}
+.yr-badge.bear{background:#7f1d1d;color:#ef4444}
+.yr-badge.neutral{background:#1e293b;color:#f59e0b}
+.footer{text-align:center;font-size:9px;color:#475569;padding:16px;line-height:1.8}
+a{color:#3b82f6;text-decoration:none}
+.kpi-big{text-align:center;padding:4px 0 8px}
+.kpi-big .v{font-size:34px;font-weight:900}
+.kpi-big .l{font-size:10px;color:#64748b;margin-top:2px}
+</style>
+</head>
+<body>
+
+<div class="top">
+<div class="t">🧠 野人哥情绪量化分析</div>
+<div class="ts" id="timeDisplay">--:--:--</div>
+</div>
+
+<div class="hero">
+<div class="tag">情绪量化 ACB · 30年超短 · 全网同名</div>
+<div class="name">野人哥 · 指数关联度透视</div>
+<div class="desc">基于近10个月179篇作品全文的情绪自动打标，对比上证/深成/创业板/科创50四大指数。<br>⚠️ 回测结论：其价值在个股情绪量化，对大盘次日预测无统计优势，仅供学习参考。</div>
+</div>
+
+<div class="card">
+<div class="ct">📊 近30日情绪走势 <span class="sub" id="chart1Sub">--</span></div>
+<div id="sentChart" class="chart"></div>
+<div style="display:flex;justify-content:center;gap:12px;font-size:9px;color:#64748b;margin-top:4px">
+<span><span style="color:#22c55e">■</span> 看多</span>
+<span><span style="color:#ef4444">■</span> 看空</span>
+<span><span style="color:#f59e0b">■</span> 中性</span>
+</div>
+</div>
+
+<div class="card">
+<div class="ct">🎯 最新作品</div>
+<div id="lastWrap"><div style="color:#475569;text-align:center;padding:10px;font-size:11px">加载中...</div></div>
+<div class="note" id="lastNote"></div>
+</div>
+
+<div class="card">
+<div class="ct">📈 四大指数一致性对比 <span class="sub">情绪分 vs 指数涨跌</span></div>
+<table>
+<thead><tr><th>指数</th><th>当日相关</th><th>次日相关</th><th>方向命中</th><th>看多命中</th></tr></thead>
+<tbody id="idxBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
+</table>
+<div class="note">
+<strong>解读：</strong>「方向命中」= 文章明确看多→当日涨 / 看空→当日跌的比例。全量样本下四指数当日相关度都在 0.05~0.14 之间（弱），说明他主做个股连板，指数只是行情背景板。<strong>若要当情绪信号参考，创业板+科创50 的贴合度相对高于上证。</strong>
+</div>
+</div>
+
+<div class="card">
+<div class="ct">🧭 大盘预判回测 <span class="sub" id="btSub">--</span></div>
+<div class="kpi-big"><div class="v" id="btRate">--</div><div class="l">次日收盘方向命中率（预测 29 次）</div></div>
+<div class="grid2">
+<div class="gi"><div class="l">看涨预判命中</div><div class="v green" id="btBull">--</div></div>
+<div class="gi"><div class="l">看跌预判命中</div><div class="v red" id="btBear">--</div></div>
+</div>
+<div style="max-height:220px;overflow-y:auto;margin-top:8px">
+<table><thead><tr><th>发布日</th><th>预判</th><th>次日</th><th>深成指</th><th>结果</th></tr></thead>
+<tbody id="btBody"></tbody></table>
+</div>
+<div class="note">
+<strong>硬结论：</strong>收盘命中率约 34%，明显低于同期随机水平（约 54%）。他本人也承认"不研究大盘"，三板斧只用于<strong>仓位管理</strong>（预测弱→降仓/空仓），从不做方向赌注。回测验证了：<strong>单一博主的次日大盘预判不可作为交易信号</strong>。
+</div>
+</div>
+
+<div class="card">
+<div class="ct">🗂 最近作品 <span class="sub">自动抓取 · 情绪词典打标</span></div>
+<div id="articleList"><div style="color:#475569;text-align:center;padding:10px;font-size:11px">加载中...</div></div>
+</div>
+
+<div class="footer">
+数据来源：淘股吧野人哥博客（与抖音同步）<br>
+情绪打标：36多头/30空头词 词典计数 · 非模型预测<br>
+<a href="/intraday">→ 跨境联动信号系统</a> · 仅供研究学习，不构成投资建议
+</div>
+
+<script>
+const fmtCorr=x=>x===null||x===undefined?'--':x.toFixed(3)
+const fmtTime=()=>{const n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0')}
+document.getElementById('timeDisplay').textContent=fmtTime()
+let sentChart=null
+
+function loadData(){
+fetch('/api/yeren').then(r=>r.json()).then(d=>{
+if(!d.ok)return
+document.getElementById('chart1Sub').textContent='更新于 '+fmtTime()
+// 情绪柱状图(近30日)
+const rec=(d.recent||[]).slice().reverse()
+const colors={看多:'#22c55e',看空:'#ef4444',中性:'#f59e0b'}
+const data=rec.map(r=>({value:r.sentiment,itemStyle:{color:colors[r.direction]||'#475569'}}))
+const dates=rec.map(r=>r.date.slice(5))
+if(!sentChart){
+sentChart=echarts.init(document.getElementById('sentChart'))
+sentChart.on('click',()=>{})
+}
+sentChart.setOption({
+grid:{left:30,right:8,top:10,bottom:20},
+xAxis:{type:'category',data:dates,axisLabel:{color:'#475569',fontSize:8,interval:Math.ceil(rec.length/8)},axisLine:{lineStyle:{color:'#334155'}}},
+yAxis:{type:'value',axisLabel:{color:'#475569',fontSize:8},splitLine:{lineStyle:{color:'#1e293b'}}},
+tooltip:{trigger:'axis',backgroundColor:'#0b1120',borderColor:'#334155',textStyle:{fontSize:10,color:'#e2e8f0'}},
+series:[{type:'bar',data:data,barMaxWidth:14}]
+})
+// 最新作品
+const last=d.last||{}
+if(last.title){
+let lbl=last.direction,cl=last.direction==='看多'?'bull':last.direction==='看空'?'bear':'neutral'
+const lastWrap=document.getElementById('lastWrap')
+lastWrap.innerHTML=`<div style="font-size:10px;color:#475569">${last.date}</div><div style="font-size:13px;font-weight:700;margin-top:3px;line-height:1.5">${last.title}</div><div style="margin-top:6px"><span class="yr-badge ${cl}">${lbl}</span> <span style="font-size:11px;color:#94a3b8;margin-left:6px">情绪分 ${(last.sentiment>=0?'+':'')}${last.sentiment.toFixed(2)}</span></div>`
+const st=d.stats||{}
+document.getElementById('lastNote').innerHTML=`近10个月共 <strong>${st.n}篇</strong>：看多 <strong class="green">${st.bull}</strong> · 看空 <strong class="red">${st.bear}</strong> · 中性 <strong class="orange">${st.neutral}</strong>，平均情绪分 <strong>${st.avg_score!==null?'+':''}${st.avg_score}</strong>`
+}
+// 四指数对比表
+const ic=d.index_compare||{}
+const rank=['上证','深成','创业板','科创50']
+document.getElementById('idxBody').innerHTML=rank.map(name=>{
+const r=ic[name]||{}
+const best=rank.filter(n=>ic[n]&&ic[n].corr_same).sort((a,b)=>(ic[b].corr_same||-9)-(ic[a].corr_same||-9))[0]
+const hl=name===best?' style="background:rgba(34,197,94,0.07)"':''
+const hr=r.hit_rate===null?'--':r.hit_rate+'%'
+const br=r.bull_rate===null?'--':r.bull_rate+'%'
+return `<tr${hl}><td>${name}${name===best?' <span style="font-size:8px;color:#22c55e">●最高</span>':''}</td>
+<td class="purple">${fmtCorr(r.corr_same)}</td>
+<td class="gray">${fmtCorr(r.corr_next)}</td>
+<td class="${(r.hit_rate||0)>=50?'green':'orange'}">${hr}<span class="gray" style="font-size:8px"> (${r.hit_n})</span></td>
+<td class="${(r.bull_rate||0)>=50?'green':'orange'}">${br}</td></tr>`
+}).join('')
+// 回测
+const bt=d.backtest||{}
+document.getElementById('btSub').textContent='样本 '+bt.n+' · 命中 '+bt.hit+' · 随机基准≈54%'
+document.getElementById('btRate').textContent=(bt.rate===null?'--':bt.rate+'%')
+const rows=bt.rows||[]
+const bull=rows.filter(r=>r.pred==='涨'),bear=rows.filter(r=>r.pred==='跌')
+document.getElementById('btBull').textContent=bull.filter(r=>r.hit).length+'/'+bull.length
+document.getElementById('btBear').textContent=bear.filter(r=>r.hit).length+'/'+bear.length
+document.getElementById('btBody').innerHTML=rows.slice().reverse().map(r=>{
+const cl=r.hit?'green':'red'
+return `<tr><td>${r.date}</td><td class="${r.pred==='涨'?'green':'red'}">${r.pred==='涨'?'▲看涨':'▼看跌'}</td><td>${r.next}</td><td class="${r.sz_pct>=0?'green':'red'}">${r.sz_pct>=0?'+':''}${r.sz_pct}%</td><td class="${cl}">${r.hit?'✓命中':'✗偏差'}</td></tr>`
+}).join('')
+// 文章列表
+document.getElementById('articleList').innerHTML=(d.recent||[]).map(r=>{
+const cl=r.direction==='看多'?'bull':r.direction==='看空'?'bear':'neutral'
+const lbl=r.direction==='看多'?'看多':r.direction==='看空'?'看空':'中性'
+const t=(r.title||'').replace(/_野人哥_淘股吧$/,'')
+return `<div class="yr-item"><span class="yd">${r.date}</span><span class="yt">${t}</span><span class="yr-badge ${cl}">${lbl}</span></div>`
+}).join('')
+}).catch(()=>{})
+}
+
+window.addEventListener('resize',()=>{if(sentChart)sentChart.resize()})
+loadData()
+setInterval(loadData,600000)
+</script>
+</body>
+</html>

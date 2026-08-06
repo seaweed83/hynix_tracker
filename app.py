@@ -2691,6 +2691,11 @@ def intraday_page():
     return render_template('intraday.html')
 
 
+@app.route('/yeren')
+def yeren_page():
+    return render_template('yeren.html')
+
+
 @app.route('/api/market')
 def api_market():
     data = get_market_overview()
@@ -2901,7 +2906,7 @@ def api_signals_history():
 
 @app.route('/api/yeren')
 def api_yeren():
-    """野人哥情绪面板: 最近文章 + 方向分布 + 情绪分 vs 大盘关联度"""
+    """野人哥完整分析API: 情绪面板 + 四指数对比 + 方向命中 + 预判回测"""
     yeren_db = os.environ.get('YEREN_DB', os.path.expanduser(
         '~/Documents/trae_projects/yeren_analysis/yeren.db'))
     if not os.path.exists(yeren_db):
@@ -2911,7 +2916,7 @@ def api_yeren():
         conn.row_factory = sqlite3.Row
         recent = [dict(r) for r in conn.execute(
             'SELECT date, title, sentiment, direction FROM yeren_daily '
-            'ORDER BY date DESC LIMIT 20')]
+            'ORDER BY date DESC LIMIT 30')]
         stats_row = conn.execute(
             'SELECT COUNT(*) n, SUM(CASE WHEN direction=? THEN 1 ELSE 0 END) bull, '
             'SUM(CASE WHEN direction=? THEN 1 ELSE 0 END) bear, '
@@ -2919,14 +2924,16 @@ def api_yeren():
             'AVG(sentiment) avg_score '
             'FROM yeren_daily', ('看多', '看空', '中性')).fetchone()
         y = conn.execute('SELECT date, sentiment, direction FROM yeren_daily ORDER BY date').fetchall()
-        m = conn.execute('SELECT date, sz_pct, cyb_pct, sh_pct FROM market_daily ORDER BY date').fetchall()
+        m = conn.execute('SELECT date, sh_pct, cyb_pct, sz_pct, kc_pct FROM market_daily ORDER BY date').fetchall()
         conn.close()
         mdates = [r['date'] for r in m]
         mpos = {d: i for i, d in enumerate(mdates)}
         mdict = {r['date']: r for r in m}
 
-        def _corr(offset):
-            import numpy as np
+        import numpy as np
+        IDX_COLS = {'上证': 'sh_pct', '深成': 'sz_pct', '创业板': 'cyb_pct', '科创50': 'kc_pct'}
+
+        def _corr(offset, col='sz_pct'):
             a = []; b = []
             for r in y:
                 if r['date'] not in mdict:
@@ -2935,13 +2942,64 @@ def api_yeren():
                 j = i + offset
                 if j < 0 or j >= len(mdates):
                     continue
-                v = mdict[mdates[j]]['sz_pct']
+                v = mdict[mdates[j]][col]
                 if v is None:
                     continue
                 a.append(r['sentiment']); b.append(v)
             if len(a) < 5 or np.std(a) < 1e-9 or np.std(b) < 1e-9:
                 return None
             return round(float(np.corrcoef(a, b)[0, 1]), 4)
+
+        # 四指数对比: 当日相关 + 方向命中率
+        index_compare = {}
+        for name, col in IDX_COLS.items():
+            hits = tot = bull_h = bull_t = 0
+            for r in y:
+                rr = mdict.get(r['date'])
+                if not rr or rr[col] is None or r['direction'] == '中性':
+                    continue
+                tot += 1
+                if (r['direction'] == '看多' and rr[col] > 0) or (r['direction'] == '看空' and rr[col] < 0):
+                    hits += 1
+                if r['direction'] == '看多':
+                    bull_t += 1
+                    if rr[col] > 0:
+                        bull_h += 1
+            index_compare[name] = {
+                'corr_same': _corr(0, col),
+                'corr_next': _corr(1, col),
+                'hit_rate': round(hits / tot * 100, 1) if tot else None,
+                'hit_n': tot,
+                'bull_rate': round(bull_h / bull_t * 100, 1) if bull_t else None,
+                'bull_n': bull_t,
+            }
+
+        # 预判回测: 手动整理的历史明确预判方向
+        preds = [
+            ('2025-12-08', '跌'), ('2025-12-16', '跌'), ('2026-01-26', '跌'),
+            ('2026-02-02', '跌'), ('2026-03-12', '跌'), ('2026-03-25', '涨'),
+            ('2026-04-02', '涨'), ('2026-04-08', '跌'), ('2026-04-09', '跌'),
+            ('2026-04-10', '跌'), ('2026-04-12', '跌'), ('2026-04-13', '跌'),
+            ('2026-04-15', '跌'), ('2026-04-23', '涨'), ('2026-04-29', '涨'),
+            ('2026-05-08', '跌'), ('2026-05-13', '跌'), ('2026-05-15', '涨'),
+            ('2026-06-26', '跌'), ('2026-06-29', '跌'), ('2026-06-30', '跌'),
+            ('2026-07-01', '涨'), ('2026-07-03', '涨'), ('2026-07-06', '涨'),
+            ('2026-07-08', '涨'), ('2026-07-09', '涨'), ('2026-07-10', '跌'),
+            ('2026-07-13', '涨'), ('2026-07-14', '跌'), ('2026-07-15', '跌'),
+        ]
+        bt_rows = []
+        for pd_, dirn in preds:
+            i = mpos.get(pd_)
+            if i is None or i + 1 >= len(mdates):
+                continue
+            nd = mdates[i + 1]
+            v = mdict[nd]['sz_pct']
+            if v is None:
+                continue
+            ok = (dirn == '涨' and v > 0) or (dirn == '跌' and v < 0)
+            bt_rows.append({'date': pd_, 'pred': dirn, 'next': nd,
+                            'sz_pct': round(v, 2), 'hit': ok})
+        bt_hits = sum(1 for r in bt_rows if r['hit'])
 
         last = recent[0] if recent else None
         return jsonify({
@@ -2960,6 +3018,13 @@ def api_yeren():
             "corr": {
                 "same_day_sz": _corr(0),
                 "next_day_sz": _corr(1),
+            },
+            "index_compare": index_compare,
+            "backtest": {
+                "n": len(bt_rows),
+                "hit": bt_hits,
+                "rate": round(bt_hits / len(bt_rows) * 100, 1) if bt_rows else None,
+                "rows": bt_rows,
             },
             "recent": recent,
         })
@@ -3002,6 +3067,7 @@ def api_health():
         },
         "pages": {
             "信号": "/intraday",
+            "野人哥分析": "/yeren",
             "报告": "/report/v3",
             "回测": "/report/v2",
             "首页": "/",
