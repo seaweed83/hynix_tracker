@@ -2899,6 +2899,74 @@ def api_signals_history():
         return jsonify({"error": str(e), "records": []}), 500
 
 
+@app.route('/api/yeren')
+def api_yeren():
+    """野人哥情绪面板: 最近文章 + 方向分布 + 情绪分 vs 大盘关联度"""
+    yeren_db = os.environ.get('YEREN_DB', os.path.expanduser(
+        '~/Documents/trae_projects/yeren_analysis/yeren.db'))
+    if not os.path.exists(yeren_db):
+        return jsonify({"ok": False, "msg": "yeren.db not found"}), 404
+    try:
+        conn = sqlite3.connect(yeren_db)
+        conn.row_factory = sqlite3.Row
+        recent = [dict(r) for r in conn.execute(
+            'SELECT date, title, sentiment, direction FROM yeren_daily '
+            'ORDER BY date DESC LIMIT 20')]
+        stats_row = conn.execute(
+            'SELECT COUNT(*) n, SUM(CASE WHEN direction=? THEN 1 ELSE 0 END) bull, '
+            'SUM(CASE WHEN direction=? THEN 1 ELSE 0 END) bear, '
+            'SUM(CASE WHEN direction=? THEN 1 ELSE 0 END) neutral, '
+            'AVG(sentiment) avg_score '
+            'FROM yeren_daily', ('看多', '看空', '中性')).fetchone()
+        y = conn.execute('SELECT date, sentiment, direction FROM yeren_daily ORDER BY date').fetchall()
+        m = conn.execute('SELECT date, sz_pct, cyb_pct, sh_pct FROM market_daily ORDER BY date').fetchall()
+        conn.close()
+        mdates = [r['date'] for r in m]
+        mpos = {d: i for i, d in enumerate(mdates)}
+        mdict = {r['date']: r for r in m}
+
+        def _corr(offset):
+            import numpy as np
+            a = []; b = []
+            for r in y:
+                if r['date'] not in mdict:
+                    continue
+                i = mpos[r['date']]
+                j = i + offset
+                if j < 0 or j >= len(mdates):
+                    continue
+                v = mdict[mdates[j]]['sz_pct']
+                if v is None:
+                    continue
+                a.append(r['sentiment']); b.append(v)
+            if len(a) < 5 or np.std(a) < 1e-9 or np.std(b) < 1e-9:
+                return None
+            return round(float(np.corrcoef(a, b)[0, 1]), 4)
+
+        last = recent[0] if recent else None
+        return jsonify({
+            "ok": True,
+            "stats": {
+                "n": stats_row['n'], "bull": stats_row['bull'],
+                "bear": stats_row['bear'], "neutral": stats_row['neutral'],
+                "avg_score": round(stats_row['avg_score'], 3) if stats_row['avg_score'] is not None else None,
+            },
+            "last": {
+                "date": last['date'] if last else None,
+                "title": (last['title'] or '').replace('_野人哥_淘股吧', '') if last else None,
+                "direction": last['direction'] if last else None,
+                "sentiment": last['sentiment'] if last else None,
+            },
+            "corr": {
+                "same_day_sz": _corr(0),
+                "next_day_sz": _corr(1),
+            },
+            "recent": recent,
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "msg": str(e)}), 500
+
+
 @app.route('/api/health')
 def api_health():
     return jsonify({
@@ -2929,6 +2997,7 @@ def api_health():
             "paper_stats": "/api/paper/stats",
             "paper_record": "/api/paper/record",
             "push_daily": "/api/push/daily",
+            "yeren": "/api/yeren",
             "all": "/api/all",
         },
         "pages": {

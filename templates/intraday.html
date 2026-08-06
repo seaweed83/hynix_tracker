@@ -97,6 +97,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .heat-cell .hc-sign{font-size:7px;color:#64748b;margin-top:1px}
 .heat-sector{font-size:9px;color:#475569;margin:8px 0 4px;font-weight:600;display:flex;align-items:center;gap:5px}
 .heat-sector::before{content:'';width:3px;height:10px;background:#f59e0b;border-radius:2px}
+/* ===== 野人哥情绪面板 ===== */
+.yeren-panel{background:#1e293b;border-radius:12px;margin:6px 12px;padding:12px;border:1px solid #334155}
+.yeren-panel .yp{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.yeren-panel .yp .refresh{font-size:9px;color:#475569}
+.yr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.yr-stats .pi{text-align:center;background:#0b1120;border-radius:8px;padding:8px}
+.yr-stats .pi .l{font-size:8px;color:#64748b}
+.yr-stats .pi .v{font-size:15px;font-weight:700}
+.yr-last{background:#0b1120;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #1e293b}
+.yr-last .lt{font-size:9px;color:#475569;margin-bottom:3px}
+.yr-last .ls{font-size:12px;font-weight:700;color:#e2e8f0;line-height:1.5}
+.yr-corr{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.yr-corr .pi{text-align:center;background:#0b1120;border-radius:8px;padding:8px}
+.yr-corr .pi .l{font-size:8px;color:#64748b}
+.yr-corr .pi .v{font-size:14px;font-weight:700}
+.yr-list{max-height:220px;overflow-y:auto}
+.yr-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #0b1120}
+.yr-item:last-child{border-bottom:none}
+.yr-item .yd{font-size:9px;color:#475569;width:52px;flex-shrink:0}
+.yr-item .yt{flex:1;font-size:10px;color:#cbd5e1;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.yr-badge{font-size:8px;padding:2px 6px;border-radius:4px;flex-shrink:0;font-weight:700}
+.yr-badge.bull{background:#064e3b;color:#22c55e}
+.yr-badge.bear{background:#7f1d1d;color:#ef4444}
+.yr-badge.neutral{background:#1e293b;color:#f59e0b}
+.yr-bar{display:flex;align-items:flex-end;gap:3px;height:36px;margin-top:4px}
+.yr-bar .b{flex:1;border-radius:2px;background:#334155;min-height:2px;transition:height 0.4s}
+.yr-bar .b.up{background:#22c55e}.yr-bar .b.dn{background:#ef4444}.yr-bar .b.nt{background:#f59e0b}
+.yr-bar-wrap{background:#0b1120;border-radius:8px;padding:8px 8px 4px;border:1px solid #1e293b}
 ::-webkit-scrollbar{height:2px;width:2px}
 ::-webkit-scrollbar-track{background:#0b1120}
 ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
@@ -132,9 +160,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="heatBody"><div style="text-align:center;color:#475569;font-size:10px;padding:12px">加载中...</div></div>
 </div>
 
+<div class="yeren-panel" id="yerenPanel">
+<div class="yp">🧠 野人哥情绪面板 <span class="refresh" id="yerenTime">--</span></div>
+<div class="yr-stats">
+<div class="pi"><div class="l">总样本</div><div class="v blue" id="yrN">--</div></div>
+<div class="pi"><div class="l">看多</div><div class="v green" id="yrBull">--</div></div>
+<div class="pi"><div class="l">看空</div><div class="v red" id="yrBear">--</div></div>
+<div class="pi"><div class="l">中性</div><div class="v orange" id="yrNeutral">--</div></div>
+</div>
+<div class="yr-last">
+<div class="lt">最新作品 <span id="yrLastDate" style="color:#475569"></span></div>
+<div class="ls" id="yrLastTitle">--</div>
+<div style="font-size:10px;margin-top:4px"><span id="yrLastDir" class="yr-badge">--</span> <span id="yrLastScore" style="color:#94a3b8;font-size:10px"></span></div>
+</div>
+<div class="yr-corr">
+<div class="pi"><div class="l">情绪分 vs 当日深成</div><div class="v purple" id="yrCorrSame">--</div></div>
+<div class="pi"><div class="l">情绪分 vs 次日深成</div><div class="v purple" id="yrCorrNext">--</div></div>
+</div>
+<div class="yr-bar-wrap">
+<div style="font-size:8px;color:#475569;margin-bottom:4px">近20篇情绪分 <span style="color:#334155">绿=看多 红=看空 橙=中性</span></div>
+<div class="yr-bar" id="yrBar"></div>
+</div>
+<div class="yr-list" id="yrList">
+<div style="color:#475569;text-align:center;padding:12px;font-size:11px">加载中...</div>
+</div>
+</div>
+
 <div class="pairs-overview" id="pairsOverview">
-<div class="pt">🌐 全部联动对一览 <span class="refresh" id="ovTime">--</span></div>
-<table id="ovTable">
+<div class="pt">🌐 全部联动对一览 <span class="refresh" id="ovTime">--</span></div><table id="ovTable">
 <thead><tr><th>联动对</th><th>相关性</th><th>最优lag</th><th>z值</th><th>跟随方涨跌</th></tr></thead>
 <tbody id="ovBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
 </table>
@@ -356,6 +409,50 @@ html+=`<div class="heat-cell" style="background:${heatColor(pct)}" onclick="sele
 html+='</div>'
 })
 document.getElementById('heatBody').innerHTML=html
+}).catch(()=>{})
+}
+
+function loadYeren(){
+fetch('/api/yeren').then(r=>r.json()).then(d=>{
+if(!d.ok)return
+const now=new Date(),ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
+document.getElementById('yerenTime').textContent=ts
+const st=d.stats||{}
+document.getElementById('yrN').textContent=st.n||'--'
+document.getElementById('yrBull').textContent=st.bull||0
+document.getElementById('yrBear').textContent=st.bear||0
+document.getElementById('yrNeutral').textContent=st.neutral||0
+const last=d.last||{}
+if(last.title){
+document.getElementById('yrLastDate').textContent=last.date
+document.getElementById('yrLastTitle').textContent=last.title
+const dir=last.direction==='看多'?'bull':last.direction==='看空'?'bear':'neutral'
+const lbl=last.direction==='看多'?'▲看多':last.direction==='看空'?'▼看空':'◆中性'
+const b=document.getElementById('yrLastDir')
+b.textContent=lbl
+b.className='yr-badge '+dir
+document.getElementById('yrLastScore').textContent='情绪分 '+(last.sentiment>=0?'+':'')+last.sentiment.toFixed(2)
+}
+const c=d.corr||{}
+const fmtCorr=(x)=>x===null||x===undefined?'--':x.toFixed(3)
+document.getElementById('yrCorrSame').textContent=fmtCorr(c.same_day_sz)
+document.getElementById('yrCorrNext').textContent=fmtCorr(c.next_day_sz)
+// 情绪柱状图
+const rec=(d.recent||[]).slice().reverse()
+const bar=document.getElementById('yrBar')
+bar.innerHTML=rec.map(r=>{
+const cl=r.direction==='看多'?'up':r.direction==='看空'?'dn':'nt'
+const h=Math.max(6,Math.min(100,Math.abs(r.sentiment)*100+4))
+return `<div class="b ${cl}" style="height:${h}%" title="${r.date} ${r.direction} ${r.sentiment}"></div>`
+}).join('')
+// 文章列表(最新在前)
+const list=document.getElementById('yrList')
+list.innerHTML=(d.recent||[]).map(r=>{
+const cl=r.direction==='看多'?'bull':r.direction==='看空'?'bear':'neutral'
+const lbl=r.direction==='看多'?'看多':r.direction==='看空'?'看空':'中性'
+const t=(r.title||'').replace(/_野人哥_淘股吧$/,'')
+return `<div class="yr-item"><span class="yd">${r.date}</span><span class="yt">${t}</span><span class="yr-badge ${cl}">${lbl}</span></div>`
+}).join('')
 }).catch(()=>{})
 }
 
@@ -603,6 +700,7 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('/static/sw.js')
 initCharts()
 loadPairs()
 loadHeat()
+loadYeren()
 loadOverview()
 loadPaper()
 fetchBT()
@@ -613,6 +711,7 @@ setInterval(fetchBT,120000)
 setInterval(fetchSigHistory,30000)
 setInterval(loadOverview,600000)
 setInterval(loadHeat,30000)
+setInterval(loadYeren,600000)
 </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 App({
   globalData: {
-    serverUrl: 'http://127.0.0.1:5800',
+    serverUrl: 'https://generator-speech-impression-screenshots.trycloudflare.com',
     signalData: null,
     backtestData: null,
     refreshTimer: null

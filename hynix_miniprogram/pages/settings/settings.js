@@ -3,7 +3,7 @@ const api = require('../../utils/api')
 
 Page({
   data: {
-    serverUrl: 'http://127.0.0.1:5800',
+    serverUrl: 'https://generator-speech-impression-screenshots.trycloudflare.com',
     status: ''
   },
 
