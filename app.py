@@ -41,6 +41,21 @@ def _init_db():
         conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_signal_ts ON signal_history(timestamp)
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS paper_trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                pair_id TEXT NOT NULL,
+                signal TEXT NOT NULL,
+                z_score REAL,
+                price REAL,
+                follow_change_pct REAL,
+                details TEXT
+            )
+        ''')
+        conn.execute('''
+            CREATE INDEX IF NOT EXISTS idx_paper_pair ON paper_trades(pair_id, timestamp)
+        ''')
         conn.commit()
         conn.close()
 
@@ -76,11 +91,30 @@ def _save_signal(signal_data):
     except Exception:
         pass  # persistence should never break the main flow
 
+
+def _save_paper_trade(pair_id, signal, z_score, price, follow_change_pct):
+    """记录一次模拟盘信号(用于命中率统计)"""
+    try:
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            conn.execute(
+                '''INSERT INTO paper_trades
+                   (timestamp, pair_id, signal, z_score, price, follow_change_pct)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), pair_id, signal,
+                 z_score, price, follow_change_pct)
+            )
+            conn.commit()
+            conn.close()
+    except Exception:
+        pass
+
 for var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
     os.environ.pop(var, None)
 
 _cache = {"market": None, "market_time": 0, "market_ttl": 600,
           "quotes": None, "quotes_time": 0, "quotes_ttl": 20}
+_fetch_lock = threading.Lock()
 CANDIDATE_STOCKS = [
     ("603986", "兆易创新", "半导体"),
     ("688008", "澜起科技", "半导体"),
@@ -2073,7 +2107,8 @@ PAIRS = {
 
 def _fetch_us_daily(symbol, count=600):
     """akshare美股日线 → 统一列名(Open/High/Low/Close/Volume)"""
-    df = ak.stock_us_daily(symbol=symbol)
+    with _fetch_lock:
+        df = ak.stock_us_daily(symbol=symbol)
     if df is None or df.empty:
         return pd.DataFrame()
     df = df.tail(count)
@@ -2086,7 +2121,8 @@ def _fetch_us_daily(symbol, count=600):
 
 def _fetch_hk_daily(symbol, count=600):
     """akshare港股日线 → 统一列名"""
-    df = ak.stock_hk_daily(symbol=symbol, adjust='qfq')
+    with _fetch_lock:
+        df = ak.stock_hk_daily(symbol=symbol, adjust='qfq')
     if df is None or df.empty:
         return pd.DataFrame()
     df = df.tail(count)
@@ -2102,7 +2138,8 @@ def _fetch_tx_a_daily(symbol, days=900):
     today = datetime.now()
     start = (today - timedelta(days=days)).strftime('%Y%m%d')
     end = today.strftime('%Y%m%d')
-    df = ak.stock_zh_a_hist_tx(symbol=symbol, start_date=start, end_date=end, adjust='qfq')
+    with _fetch_lock:
+        df = ak.stock_zh_a_hist_tx(symbol=symbol, start_date=start, end_date=end, adjust='qfq')
     if df is None or df.empty:
         return pd.DataFrame()
     df = df.rename(columns={'date': 'Date', 'open': 'Open', 'close': 'Close',
@@ -2398,6 +2435,104 @@ def api_heat():
         "heat_level": heat_level,
         "sectors": {s: [pid for pid in pids if pid in results] for s, pids in SECTOR_MAP.items()},
         "pairs": results,
+        "count": len(results),
+    })
+
+
+@app.route('/api/paper/record')
+def api_paper_record():
+    """手动记录一次模拟盘信号"""
+    pid = request.args.get('pair', 'sk_xn')
+    sig = request.args.get('signal', 'hold')
+    z = request.args.get('z', type=float, default=0)
+    price = request.args.get('price', type=float, default=0)
+    chg = request.args.get('chg', type=float, default=0)
+    if pid not in PAIRS:
+        return jsonify({"error": "unknown pair"}), 400
+    _save_paper_trade(pid, sig, z, price, chg)
+    return jsonify({"status": "ok", "pair": pid, "signal": sig})
+
+
+@app.route('/api/paper/stats')
+def api_paper_stats():
+    """模拟盘命中率: 用信号后N日实际涨跌核对信号方向"""
+    limit = min(request.args.get('limit', type=int, default=100), 500)
+    rows = []
+    try:
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.execute(
+                '''SELECT id, timestamp, pair_id, signal, z_score, price, follow_change_pct
+                   FROM paper_trades ORDER BY id DESC LIMIT ?''', (limit,))
+            rows = cur.fetchall()
+            conn.close()
+    except Exception:
+        return jsonify({"error": "db read failed"}), 500
+
+    # 按Pair拉取日线计算后续N日实际涨跌
+    import concurrent.futures
+    pair_dfs = {}
+    def _load(pid):
+        try:
+            d = analyze_pair(pid)
+            if "error" not in d:
+                return pid, d["follow_prices"]
+        except Exception:
+            pass
+        return pid, None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futs = {executor.submit(_load, pid): pid for pid in PAIRS}
+        for fut in concurrent.futures.as_completed(futs):
+            pid, prices = fut.result()
+            if prices:
+                pair_dfs[pid] = prices
+
+    results = []
+    hit1 = hit3 = hit5 = 0
+    n1 = n3 = n5 = 0
+    for rid, ts, pid, sig, z, price, chg in rows:
+        prices = pair_dfs.get(pid, [])
+        # 找到信号日之后的价格序列
+        idx = -1
+        for i, p in enumerate(prices):
+            if p["date"] >= ts[:10]:
+                idx = i
+                break
+        if idx < 0:
+            idx = len(prices) - 1
+        def ret_after(days):
+            j = idx + days
+            if j >= len(prices) or j < 0:
+                return None
+            return (prices[j]["close"] / prices[idx]["close"] - 1) * 100
+        r1, r3, r5 = ret_after(1), ret_after(3), ret_after(5)
+        expect_up = sig == "buy"
+        expect_down = sig == "sell"
+        rec = {
+            "id": rid, "timestamp": ts, "pair": pid,
+            "signal": sig, "z": z, "entry_price": price,
+            "r1": r1, "r3": r3, "r5": r5,
+        }
+        if r1 is not None:
+            n1 += 1
+            if (expect_up and r1 > 0) or (expect_down and r1 < 0):
+                hit1 += 1
+        if r3 is not None:
+            n3 += 1
+            if (expect_up and r3 > 0) or (expect_down and r3 < 0):
+                hit3 += 1
+        if r5 is not None:
+            n5 += 1
+            if (expect_up and r5 > 0) or (expect_down and r5 < 0):
+                hit5 += 1
+        results.append(rec)
+    return jsonify({
+        "trades": results,
+        "hit_rate": {
+            "d1": {"hit": hit1, "n": n1, "rate": round(hit1 / n1 * 100, 1) if n1 else None},
+            "d3": {"hit": hit3, "n": n3, "rate": round(hit3 / n3 * 100, 1) if n3 else None},
+            "d5": {"hit": hit5, "n": n5, "rate": round(hit5 / n5 * 100, 1) if n5 else None},
+        },
         "count": len(results),
     })
 
