@@ -1939,6 +1939,294 @@ def get_xn_data(days=400):
     }
 
 
+# ============ 多Pair跨境联动系统 ============
+
+PAIRS = {
+    "sk_xn": {
+        "name": "SK海力士 → 香农芯创",
+        "desc": "HBM存储分销龙头传导",
+        "lead": {"code": "000660", "src": "naver", "name": "SK海力士", "mkt": "KOSPI"},
+        "follow": {"code": "sz300475", "src": "tx_a", "name": "香农芯创", "mkt": "A股创业板"},
+        "relation": "SK海力士是香农芯创的授权分销商",
+    },
+    "nvda_smic": {
+        "name": "英伟达 → 中芯国际",
+        "desc": "AI芯片设计→晶圆代工传导",
+        "lead": {"code": "NVDA", "src": "us_ak", "name": "英伟达", "mkt": "NASDAQ"},
+        "follow": {"code": "00981", "src": "hk_ak", "name": "中芯国际", "mkt": "港股"},
+        "relation": "英伟达AI芯片依赖中国晶圆代工产能",
+    },
+    "tsm_smic": {
+        "name": "台积电 → 中芯国际",
+        "desc": "晶圆代工对标传导",
+        "lead": {"code": "TSM", "src": "us_ak", "name": "台积电ADR", "mkt": "NYSE"},
+        "follow": {"code": "00981", "src": "hk_ak", "name": "中芯国际", "mkt": "港股"},
+        "relation": "台积电与中芯国际晶圆代工直接对标",
+    },
+    "sk_cjec": {
+        "name": "SK海力士 → 长电科技",
+        "desc": "HBM封测需求传导",
+        "lead": {"code": "000660", "src": "naver", "name": "SK海力士", "mkt": "KOSPI"},
+        "follow": {"code": "sh600584", "src": "tx_a", "name": "长电科技", "mkt": "A股上海"},
+        "relation": "长电科技承接SK海力士HBM封测需求",
+    },
+    "mu_giga": {
+        "name": "美光 → 兆易创新",
+        "desc": "存储周期共振传导",
+        "lead": {"code": "MU", "src": "us_ak", "name": "美光科技", "mkt": "NASDAQ"},
+        "follow": {"code": "sh603986", "src": "tx_a", "name": "兆易创新", "mkt": "A股上海"},
+        "relation": "美光与兆易创新同处存储周期",
+    },
+}
+
+
+def _fetch_us_daily(symbol, count=600):
+    """akshare美股日线 → 统一列名(Open/High/Low/Close/Volume)"""
+    df = ak.stock_us_daily(symbol=symbol)
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.tail(count)
+    df = df.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low',
+                            'close': 'Close', 'volume': 'Volume'})
+    df.index = pd.to_datetime(df['date'])
+    df = df.drop(columns=['date'])
+    return df
+
+
+def _fetch_hk_daily(symbol, count=600):
+    """akshare港股日线 → 统一列名"""
+    df = ak.stock_hk_daily(symbol=symbol, adjust='qfq')
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.tail(count)
+    df = df.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low',
+                            'close': 'Close', 'volume': 'Volume'})
+    df.index = pd.to_datetime(df['date'])
+    df = df.drop(columns=['date'])
+    return df
+
+
+def _fetch_tx_a_daily(symbol, days=900):
+    """腾讯A股日线 → 统一列名"""
+    today = datetime.now()
+    start = (today - timedelta(days=days)).strftime('%Y%m%d')
+    end = today.strftime('%Y%m%d')
+    df = ak.stock_zh_a_hist_tx(symbol=symbol, start_date=start, end_date=end, adjust='qfq')
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.rename(columns={'date': 'Date', 'open': 'Open', 'close': 'Close',
+                            'high': 'High', 'low': 'Low', 'amount': 'Volume'})
+    df['Date'] = pd.to_datetime(df['Date'])
+    df = df.set_index('Date')
+    return df
+
+
+def _fetch_pair_lead(pair):
+    """根据pair配置获取领先方数据"""
+    src = pair["lead"]["src"]
+    if src == "naver":
+        return _naver_fetch(pair["lead"]["code"], count=600)
+    elif src == "us_ak":
+        return _fetch_us_daily(pair["lead"]["code"], count=600)
+    elif src == "hk_ak":
+        return _fetch_hk_daily(pair["lead"]["code"], count=600)
+    elif src == "tx_a":
+        return _fetch_tx_a_daily(pair["lead"]["code"], days=900)
+    return pd.DataFrame()
+
+
+def _fetch_pair_follow(pair):
+    """根据pair配置获取跟随方数据"""
+    src = pair["follow"]["src"]
+    if src == "naver":
+        return _naver_fetch(pair["follow"]["code"], count=600)
+    elif src == "us_ak":
+        return _fetch_us_daily(pair["follow"]["code"], count=600)
+    elif src == "hk_ak":
+        return _fetch_hk_daily(pair["follow"]["code"], count=600)
+    elif src == "tx_a":
+        return _fetch_tx_a_daily(pair["follow"]["code"], days=900)
+    return pd.DataFrame()
+
+
+def analyze_pair(pair_id, days=800):
+    """通用Pair分析：获取→对齐→相关性→滞后相关→技术指标→协整"""
+    import numpy as np
+    pair = PAIRS.get(pair_id)
+    if not pair:
+        return {"error": f"Unknown pair: {pair_id}", "pair_id": pair_id}
+
+    df_lead = _fetch_pair_lead(pair)
+    df_follow = _fetch_pair_follow(pair)
+
+    if df_lead.empty or df_follow.empty:
+        return {"error": f"数据获取失败: lead={df_lead.empty} follow={df_follow.empty}",
+                "pair_id": pair_id, "pair_name": pair["name"]}
+
+    # 对齐日期
+    common = df_lead.index.intersection(df_follow.index)
+    if len(common) < 30:
+        return {"error": f"对齐后样本不足({len(common)}天)", "pair_id": pair_id,
+                "pair_name": pair["name"]}
+
+    df_lead = df_lead.loc[common].sort_index().tail(days)
+    df_follow = df_follow.loc[common].sort_index().tail(days)
+
+    lead_ret = df_lead['Close'].pct_change().dropna()
+    follow_ret = df_follow['Close'].pct_change().dropna()
+    idx = lead_ret.index.intersection(follow_ret.index)
+    lead_ret = lead_ret[idx]
+    follow_ret = follow_ret[idx]
+
+    roll_corr = follow_ret.rolling(60).corr(lead_ret).dropna()
+
+    # 领先滞后分析：lead领先k天后follow的相关性
+    lead_lag_results = []
+    for lag in range(0, 11):
+        lead_l = lead_ret.shift(lag).dropna()
+        common_idx = lead_l.index.intersection(follow_ret.index)
+        if len(common_idx) > 30:
+            r, p = pearsonr(lead_l.loc[common_idx], follow_ret.loc[common_idx])
+            lead_lag_results.append({"lag": lag, "r": round(r, 4), "p": round(p, 6)})
+
+    # follow领先lead（反向）
+    follow_lag_results = []
+    for lag in range(1, 11):
+        follow_l = follow_ret.shift(lag).dropna()
+        common_idx = follow_l.index.intersection(lead_ret.index)
+        if len(common_idx) > 30:
+            r, p = pearsonr(follow_l.loc[common_idx], lead_ret.loc[common_idx])
+            follow_lag_results.append({"lag": lag, "r": round(r, 4), "p": round(p, 6)})
+
+    # 找出最优领先滞后
+    best_lead = max(lead_lag_results, key=lambda x: abs(x["r"])) if lead_lag_results else {}
+    lead_direction = "lead_follows" if best_lead.get("lag", 0) > 0 else "contemporaneous"
+
+    # 技术指标(follow)
+    close = df_follow['Close']
+    ma5 = close.rolling(5).mean()
+    ma20 = close.rolling(20).mean()
+    ma60 = close.rolling(60).mean()
+    delta = close.diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    rsi14 = 100 - 100 / (1 + gain / loss)
+    ema12 = close.ewm(span=12).mean()
+    ema26 = close.ewm(span=26).mean()
+    macd = ema12 - ema26
+    macd_signal = macd.ewm(span=9).mean()
+
+    # 协整 (Engle-Granger)
+    coint = {"z_score": 0, "cointegrated": False, "half_life": None, "adf_p": None}
+    try:
+        from scipy import stats
+        lead_c = df_lead['Close'].values
+        follow_c = df_follow['Close'].values
+        n = min(len(lead_c), len(follow_c))
+        # 简单回归残差
+        res = stats.linregress(lead_c[:n], follow_c[:n])
+        resid = follow_c[:n] - res.intercept - res.slope * lead_c[:n]
+        # z-score
+        z = (resid[-1] - resid.mean()) / max(resid.std(), 1e-9)
+        coint["z_score"] = round(float(z), 3)
+        # 半衰期(AR(1))
+        if len(resid) > 5 and abs(resid[-2]) > 1e-9:
+            rho = resid[-1] / resid[-2]
+            if abs(rho) < 0.999:
+                coint["half_life"] = round(abs(np.log(0.5) / np.log(abs(rho))), 1)
+    except Exception:
+        pass
+
+    return {
+        "pair_id": pair_id,
+        "pair_name": pair["name"],
+        "desc": pair["desc"],
+        "relation": pair["relation"],
+        "lead": pair["lead"],
+        "follow": pair["follow"],
+        "n_days": len(common),
+        "stats": {
+            "correlation": round(pearsonr(lead_ret, follow_ret)[0], 4),
+            "rolling_corr_mean": round(roll_corr.mean(), 4),
+            "rolling_corr_last": round(roll_corr.iloc[-1], 4),
+            "rolling_corr_max": round(roll_corr.max(), 4),
+            "rolling_corr_min": round(roll_corr.min(), 4),
+            "best_lag": best_lead.get("lag", 0),
+            "best_lag_r": best_lead.get("r", 0),
+            "best_lag_p": best_lead.get("p", 1),
+            "lead_direction": lead_direction,
+            "follow_close": round(float(close.iloc[-1]), 2),
+            "follow_change_pct": round((close.iloc[-1] / close.iloc[-2] - 1) * 100, 2),
+            "lead_close": round(float(df_lead['Close'].iloc[-1]), 2),
+            "lead_change_pct": round((df_lead['Close'].iloc[-1] / df_lead['Close'].iloc[-2] - 1) * 100, 2),
+            "ma5": round(float(ma5.iloc[-1]), 2),
+            "ma20": round(float(ma20.iloc[-1]), 2),
+            "ma60": round(float(ma60.iloc[-1]), 2),
+            "rsi14": round(float(rsi14.iloc[-1]), 2),
+            "macd": round(float(macd.iloc[-1]), 2),
+            "macd_hist": round(float((macd - macd_signal).iloc[-1]), 2),
+        },
+        "cointegration": coint,
+        "lead_prices": [{"date": str(idx.date()), "close": float(row['Close'])} for idx, row in df_lead.iterrows()],
+        "follow_prices": [{"date": str(idx.date()), "close": float(row['Close'])} for idx, row in df_follow.iterrows()],
+        "rolling_corr": [{"date": str(idx.date()), "r": round(v, 4)} for idx, v in roll_corr.items()],
+        "lagged_corr_lead_lead": lead_lag_results,
+        "lagged_corr_follow_lead": follow_lag_results,
+    }
+
+
+@app.route('/api/pairs')
+def api_pairs():
+    """列出所有可用跨境联动对"""
+    result = []
+    for pid, p in PAIRS.items():
+        result.append({
+            "id": pid,
+            "name": p["name"],
+            "desc": p["desc"],
+            "relation": p["relation"],
+            "lead": p["lead"],
+            "follow": p["follow"],
+        })
+    return jsonify({"pairs": result, "count": len(result)})
+
+
+@app.route('/api/pair/<pair_id>')
+def api_pair(pair_id):
+    """按Pair ID分析单个跨境联动对"""
+    data = analyze_pair(pair_id)
+    return jsonify(data)
+
+
+@app.route('/api/pairs/summary')
+def api_pairs_summary():
+    """所有Pair的汇总对比"""
+    import concurrent.futures
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(analyze_pair, pid): pid for pid in PAIRS}
+        for fut in concurrent.futures.as_completed(futures):
+            pid = futures[fut]
+            try:
+                d = fut.result()
+                if "error" not in d:
+                    results[pid] = {
+                        "pair_name": d["pair_name"],
+                        "correlation": d["stats"]["correlation"],
+                        "best_lag": d["stats"]["best_lag"],
+                        "best_lag_r": d["stats"]["best_lag_r"],
+                        "z_score": d["cointegration"].get("z_score", 0),
+                        "cointegrated": d["cointegration"].get("cointegrated", False),
+                        "follow_close": d["stats"]["follow_close"],
+                        "lead_close": d["stats"]["lead_close"],
+                    }
+                else:
+                    results[pid] = {"error": d.get("error", "unknown")}
+            except Exception as e:
+                results[pid] = {"error": str(e)[:80]}
+    return jsonify(results)
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -2199,6 +2487,9 @@ def api_health():
             "hynix": "/api/hynix",
             "similar": "/api/similar",
             "xn": "/api/xn",
+            "pairs": "/api/pairs",
+            "pair": "/api/pair/{pair_id}",
+            "pairs_summary": "/api/pairs/summary",
             "all": "/api/all",
         },
         "pages": {
