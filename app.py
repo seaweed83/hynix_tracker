@@ -2924,6 +2924,11 @@ def api_health():
             "pairs": "/api/pairs",
             "pair": "/api/pair/{pair_id}",
             "pairs_summary": "/api/pairs/summary",
+            "quotes": "/api/quotes",
+            "heat": "/api/heat",
+            "paper_stats": "/api/paper/stats",
+            "paper_record": "/api/paper/record",
+            "push_daily": "/api/push/daily",
             "all": "/api/all",
         },
         "pages": {
