@@ -2610,8 +2610,59 @@ def api_paper_stats():
     })
 
 
-@app.route('/')
-def index():
+@app.route('/api/push/daily')
+def api_push_daily():
+    """生成每日推送内容(聚合当日最强联动信号) — 供小程序/定时任务调用"""
+    import concurrent.futures
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(analyze_pair, pid): pid for pid in PAIRS}
+        for fut in concurrent.futures.as_completed(futures):
+            pid = futures[fut]
+            try:
+                d = fut.result()
+                if "error" not in d:
+                    results[pid] = d
+            except Exception:
+                continue
+    # 按|z|排序取信号
+    items = []
+    for pid, d in results.items():
+        z = d["cointegration"].get("z_score", 0)
+        sig = d.get("signal", {})
+        items.append({
+            "pair_id": pid,
+            "pair_name": d["pair_name"],
+            "signal": sig.get("direction", "hold"),
+            "strength": sig.get("strength", 0),
+            "z_score": z,
+            "correlation": d["stats"]["correlation"],
+            "best_lag": d["stats"]["best_lag"],
+            "half_life": d["cointegration"].get("half_life"),
+            "follow_name": d["follow"]["name"],
+            "follow_close": d["stats"]["follow_close"],
+            "follow_change_pct": d["stats"]["follow_change_pct"],
+        })
+    items.sort(key=lambda x: abs(x["z_score"]), reverse=True)
+    strong = [i for i in items if abs(i["z_score"]) >= 1.5]
+    # 汇总今日建议
+    buys = [i for i in items if i["signal"] == "buy"]
+    sells = [i for i in items if i["signal"] == "sell"]
+    summary = "今日无强信号"
+    if strong:
+        top = strong[0]
+        summary = f"最强信号 {top['pair_name']} {({'buy':'买入','sell':'卖出','hold':'观望'}[top['signal']])} | z={top['z_score']:.2f} 强度{top['strength']:.0f}%"
+    content = {
+        "date": datetime.now().strftime('%Y-%m-%d'),
+        "summary": summary,
+        "n_strong": len(strong),
+        "n_buy": len(buys),
+        "n_sell": len(sells),
+        "strong_signals": strong,
+        "all_pairs": items,
+        "generated_at": datetime.now().strftime('%H:%M:%S'),
+    }
+    return jsonify(content)
     return render_template('index.html')
 
 
