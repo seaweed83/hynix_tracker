@@ -173,8 +173,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <div class="chart-box">
-<div class="ct"><span>📈 SK海力士 1分K线</span><span style="color:#475569;font-weight:400" id="chartInfo">实时</span></div>
+<div class="ct"><span>SK海力士 1分K线</span><span class="refresh" style="font-size:8px;color:#475569">10秒自动刷新</span></div>
 <div id="priceChart" class="chart"></div>
+</div>
+
+<div class="chart-box" id="pairChartBox" style="display:none">
+<div class="ct"><span id="pairChartTitle">领先vs跟随 归一化叠图</span><span style="font-size:8px;color:#475569" id="pairChartSub">--</span></div>
+<div id="pairChart" class="chart"></div>
+</div>
+
+<div class="chart-box" id="corrChartBox" style="display:none">
+<div class="ct">滚动相关性(60日) <span style="font-size:8px;color:#475569" id="corrChartSub">--</span></div>
+<div id="corrChart" class="chart"></div>
 </div>
 
 <div class="chart-box">
@@ -226,7 +236,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 let prevSig = 'hold', sigHistory = [], currentPair = 'sk_xn', pairs = {}
-let priceChart = null, volChart = null
+let priceChart = null, volChart = null, pairChart = null, corrChart = null
 
 function loadPairs() {
 fetch('/api/pairs').then(r=>r.json()).then(d=>{
@@ -357,6 +367,7 @@ document.getElementById('followPrice').textContent=s.follow_close.toFixed(2)
 followChange.textContent=(s.follow_change_pct>=0?'+':'')+s.follow_change_pct.toFixed(2)+'%'
 followChange.className='c '+(s.follow_change_pct>=0?'green':'red')
 document.getElementById('followSub').textContent=p.follow.name+' · '+p.follow.mkt
+renderPairCharts(d)
 }).catch(()=>{})
 }
 
@@ -376,10 +387,47 @@ tooltip:{trigger:'axis',formatter:function(ps){let p=ps[0];return p.axisValue+'<
 grid:{left:'4%',right:'4%',top:'6%',bottom:'10%'},
 xAxis:{type:'category',data:[],axisLabel:{color:'#475569',fontSize:8,show:false}},
 yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:8}},
-series:[{type:'bar',data:[],barWidth:'70%'}]
+ series:[{type:'bar',data:[],barWidth:'70%'}]
 })
 
-window.addEventListener('resize',()=>{priceChart.resize();volChart.resize()})
+pairChart = echarts.init(document.getElementById('pairChart'))
+corrChart = echarts.init(document.getElementById('corrChart'))
+
+window.addEventListener('resize',()=>{priceChart.resize();volChart.resize();if(pairChart)pairChart.resize();if(corrChart)corrChart.resize()})
+}
+
+function renderPairCharts(d){
+if(!pairChart||!corrChart)return
+const lead=d.lead_prices,follow=d.follow_prices,rc=d.rolling_corr
+if(!lead||!follow)return
+document.getElementById('pairChartBox').style.display='block'
+document.getElementById('corrChartBox').style.display='block'
+document.getElementById('pairChartTitle').textContent=d.lead.name+' vs '+d.follow.name+' 归一化叠图'
+document.getElementById('pairChartSub').textContent=d.n_days+'天 | 相关系数'+d.stats.correlation.toFixed(3)
+// 归一化到起点=100
+const lb=lead[0].close,fb=follow[0].close
+const ldata=lead.map(p=>[p.date,(p.close/lb*100).toFixed(2)])
+const fdata=follow.map(p=>[p.date,(p.close/fb*100).toFixed(2)])
+const dates=lead.map(p=>p.date)
+pairChart.setOption({
+tooltip:{trigger:'axis'},
+legend:{textStyle:{color:'#94a3b8',fontSize:9},top:0},
+grid:{left:'6%',right:'6%',top:'18%',bottom:'8%'},
+xAxis:{type:'category',data:dates,axisLabel:{color:'#475569',fontSize:8}},
+yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:8}},
+series:[
+{name:d.lead.name,type:'line',data:ldata,smooth:true,symbol:'none',lineStyle:{width:1.5},itemStyle:{color:'#3b82f6'}},
+{name:d.follow.name,type:'line',data:fdata,smooth:true,symbol:'none',lineStyle:{width:1.5},itemStyle:{color:'#f59e0b'}}
+]
+})
+document.getElementById('corrChartSub').textContent='均值'+d.stats.rolling_corr_mean.toFixed(2)+' 当前'+d.stats.rolling_corr_last.toFixed(2)
+corrChart.setOption({
+tooltip:{trigger:'axis'},
+grid:{left:'6%',right:'6%',top:'8%',bottom:'8%'},
+xAxis:{type:'category',data:rc.map(p=>p.date),axisLabel:{color:'#475569',fontSize:8}},
+yAxis:{type:'value',min:-1,max:1,splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{fontSize:8}},
+series:[{name:'相关r',type:'line',data:rc.map(p=>p.r),smooth:true,symbol:'none',lineStyle:{width:1.5},itemStyle:{color:'#a855f7'},markLine:{silent:true,symbol:'none',data:[{yAxis:0,lineStyle:{color:'#475569',type:'dashed'}}]}}]
+})
 }
 
 function updateSignal(sig) {
