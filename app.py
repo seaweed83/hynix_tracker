@@ -2267,6 +2267,7 @@ def api_pairs_summary():
                 d = fut.result()
                 if "error" not in d:
                     results[pid] = {
+                        "pair_id": pid,
                         "pair_name": d["pair_name"],
                         "correlation": d["stats"]["correlation"],
                         "best_lag": d["stats"]["best_lag"],
@@ -2274,6 +2275,7 @@ def api_pairs_summary():
                         "z_score": d["cointegration"].get("z_score", 0),
                         "cointegrated": d["cointegration"].get("cointegrated", False),
                         "follow_close": d["stats"]["follow_close"],
+                        "follow_change_pct": d["stats"]["follow_change_pct"],
                         "lead_close": d["stats"]["lead_close"],
                     }
                 else:
