@@ -2244,24 +2244,75 @@ def analyze_pair(pair_id, days=800):
     macd = ema12 - ema26
     macd_signal = macd.ewm(span=9).mean()
 
-    # 协整 (Engle-Granger)
-    coint = {"z_score": 0, "cointegrated": False, "half_life": None, "adf_p": None}
+    # 协整 (Engle-Granger两步法 + EWMA动态权重)
+    coint = {"z_score": 0, "cointegrated": False, "half_life": None,
+             "adf_stat": None, "adf_crit": None, "beta": None, "alpha": None}
+    ewma = {"corr_ewma": None, "corr_ewma_last": None}
     try:
         from scipy import stats
         lead_c = df_lead['Close'].values
         follow_c = df_follow['Close'].values
         n = min(len(lead_c), len(follow_c))
-        # 简单回归残差
+        # 第一步: OLS回归 Y = alpha + beta*X
         res = stats.linregress(lead_c[:n], follow_c[:n])
-        resid = follow_c[:n] - res.intercept - res.slope * lead_c[:n]
-        # z-score
+        beta = res.slope
+        alpha = res.intercept
+        resid = follow_c[:n] - alpha - beta * lead_c[:n]
+
+        # 第二步: ADF检验残差平稳性 (Dickey-Fuller回归近似)
+        # 用残差差分回归: dR_t = rho*R_{t-1} + c + eps_t
+        R = resid
+        dR = np.diff(R)
+        Rlag = R[:-1]
+        X = np.column_stack([Rlag, np.ones(len(Rlag))])
+        if len(X) > 10 and np.var(Rlag) > 1e-12:
+            try:
+                XtX = X.T @ X
+                inv = np.linalg.inv(XtX)
+                beta_hat = inv @ X.T @ dR
+                e = dR - X @ beta_hat
+                s2 = np.sum(e ** 2) / max(len(e) - 2, 1)
+                se_rho = np.sqrt(s2 * inv[0, 0])
+                adf_stat = beta_hat[0] / max(se_rho, 1e-12)
+                # MacKinnon 5%临界值近似 (双变量协整, 常数项模型)
+                adf_crit = -3.37
+                coint["adf_stat"] = round(float(adf_stat), 3)
+                coint["adf_crit"] = adf_crit
+                coint["cointegrated"] = bool(adf_stat < adf_crit)
+            except Exception:
+                pass
+        coint["beta"] = round(float(beta), 4)
+        coint["alpha"] = round(float(alpha), 4)
+
+        # 残差z-score (当前残差离均值几个标准差)
         z = (resid[-1] - resid.mean()) / max(resid.std(), 1e-9)
         coint["z_score"] = round(float(z), 3)
-        # 半衰期(AR(1))
-        if len(resid) > 5 and abs(resid[-2]) > 1e-9:
-            rho = resid[-1] / resid[-2]
-            if abs(rho) < 0.999:
-                coint["half_life"] = round(abs(np.log(0.5) / np.log(abs(rho))), 1)
+
+        # 半衰期 (真实AR(1)系数)
+        if len(resid) > 30:
+            r1 = resid[:-1]
+            r2 = resid[1:]
+            if np.var(r1) > 1e-12:
+                rho = np.sum((r1 - r1.mean()) * (r2 - r2.mean())) / np.sum((r1 - r1.mean()) ** 2)
+                if 0 < abs(rho) < 0.999:
+                    coint["half_life"] = round(abs(np.log(0.5) / np.log(abs(rho))), 1)
+
+        # EWMA动态相关性 (跨市场时差: lead滞后1天)
+        lead_lag1 = df_lead['Close'].shift(1).iloc[1:]
+        fl_c = df_follow['Close'].iloc[1:]
+        common2 = lead_lag1.index.intersection(fl_c.index)
+        if len(common2) > 30:
+            lr = lead_lag1.loc[common2].pct_change().dropna()
+            fr = fl_c.loc[common2].pct_change().dropna()
+            idx2 = lr.index.intersection(fr.index)
+            lr, fr = lr[idx2], fr[idx2]
+            # 标准化后EWMA乘积
+            lz = (lr - lr.mean()) / max(lr.std(), 1e-9)
+            fz = (fr - fr.mean()) / max(fr.std(), 1e-9)
+            alpha_ew = 0.06  # 半衰期约11天
+            c = np.exp(-alpha_ew * np.arange(len(lz))[::-1])
+            ewma_corr = np.sum(c * lz * fz) / np.sum(c)
+            ewma["corr_ewma_last"] = round(float(ewma_corr), 4)
     except Exception:
         pass
 
@@ -2295,6 +2346,18 @@ def analyze_pair(pair_id, days=800):
             "macd_hist": round(float((macd - macd_signal).iloc[-1]), 2),
         },
         "cointegration": coint,
+        "ewma": ewma,
+        "signal": {
+            "direction": "buy" if coint["z_score"] <= -2 else ("sell" if coint["z_score"] >= 2 else "hold"),
+            "strength": round(min(abs(coint["z_score"]) / 2, 1) * 100, 1),
+            "bases": {
+                "coint_z": coint["z_score"],
+                "cointegrated": coint["cointegrated"],
+                "half_life_days": coint["half_life"],
+                "ewma_lag_corr": ewma["corr_ewma_last"],
+                "rolling_corr": round(roll_corr.iloc[-1], 4),
+            },
+        },
         "lead_prices": [{"date": str(idx.date()), "close": float(row['Close'])} for idx, row in df_lead.iterrows()],
         "follow_prices": [{"date": str(idx.date()), "close": float(row['Close'])} for idx, row in df_follow.iterrows()],
         "rolling_corr": [{"date": str(idx.date()), "r": round(v, 4)} for idx, v in roll_corr.items()],
@@ -2369,6 +2432,9 @@ def api_pairs_summary():
                         "best_lag_r": d["stats"]["best_lag_r"],
                         "z_score": d["cointegration"].get("z_score", 0),
                         "cointegrated": d["cointegration"].get("cointegrated", False),
+                        "half_life": d["cointegration"].get("half_life"),
+                        "adf_stat": d["cointegration"].get("adf_stat"),
+                        "ewma_lag_corr": d["ewma"].get("corr_ewma_last"),
                         "follow_close": d["stats"]["follow_close"],
                         "follow_change_pct": d["stats"]["follow_change_pct"],
                         "lead_close": d["stats"]["lead_close"],

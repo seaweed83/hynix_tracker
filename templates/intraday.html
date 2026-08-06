@@ -136,7 +136,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="pt">🌐 全部联动对一览 <span class="refresh" id="ovTime">--</span></div>
 <table id="ovTable">
 <thead><tr><th>联动对</th><th>相关性</th><th>最优lag</th><th>z值</th><th>跟随方涨跌</th></tr></thead>
- <tbody id="ovBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
+<tbody id="ovBody"><tr><td colspan="5" style="text-align:center;color:#475569;padding:12px">加载中...</td></tr></tbody>
 </table>
 </div>
 
@@ -384,7 +384,13 @@ const z=c.z_score||0
 const zEl=document.getElementById('psZ')
 zEl.textContent=z.toFixed(2)
 zEl.className='v '+(z<-2?'green':z>2?'red':'')
-document.getElementById('psRel').textContent='🔗 '+d.relation
+// 算法详情: 协整/半衰期/EWMA
+let algo=''
+if(d.cointegration&&d.cointegration.cointegrated)algo+='✔协整'
+if(d.cointegration&&d.cointegration.half_life)algo+=' 半衰期'+d.cointegration.half_life+'天'
+if(d.ewma&&d.ewma.corr_ewma_last!==null&&d.ewma.corr_ewma_last!==undefined)algo+=' EWMA滞后相关'+d.ewma.corr_ewma_last.toFixed(3)
+if(d.signal)algo+=' 建议:'+({buy:'买入',sell:'卖出',hold:'观望'}[d.signal.direction])+'('+d.signal.strength+'%)'
+document.getElementById('psRel').textContent='🔗 '+d.relation+(algo?'\n🧮 '+algo:'')
 // 更新价格卡片
 const leadChange=document.getElementById('leadChange'),followChange=document.getElementById('followChange')
 document.getElementById('leadPrice').textContent=s.lead_close.toLocaleString()
