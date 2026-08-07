@@ -1,0 +1,79 @@
+<view class="page">
+  <!-- 顶部统计 -->
+  <view class="hero">
+    <view class="hero-tag">情绪量化 ACB · 30年超短 · 全网同名</view>
+    <view class="hero-name">野人哥 · 情绪透视</view>
+    <view class="hero-desc">179篇作品情绪打标 vs 四大指数。回测结论：对大盘无预测力，价值在个股情绪量化。</view>
+  </view>
+
+  <!-- 情绪统计 -->
+  <view class="section">
+    <view class="sec-title">📊 情绪总览</view>
+    <view class="grid4">
+      <view class="gi"><text class="gi-l">全量</text><text class="gi-v">{{n}}</text></view>
+      <view class="gi"><text class="gi-v green">{{bull}}</text><text class="gi-l">看多</text></view>
+      <view class="gi"><text class="gi-v red">{{bear}}</text><text class="gi-l">看空</text></view>
+      <view class="gi"><text class="gi-v orange">{{neutral}}</text><text class="gi-l">中性</text></view>
+    </view>
+    <view class="avg-line">平均情绪分 <text class="green">{{avg}}</text></view>
+  </view>
+
+  <!-- 最新作品 -->
+  <view class="section">
+    <view class="sec-title">🎯 最新作品</view>
+    <view class="last-card">
+      <text class="last-date">{{lastDate}}</text>
+      <text class="last-title">{{lastTitle}}</text>
+      <view class="last-row">
+        <text class="badge {{lastDir === '看多' ? 'badge-buy' : (lastDir === '看空' ? 'badge-sell' : 'badge-watch')}}">{{lastDir}}</text>
+        <text class="last-sent">情绪分 {{lastSent}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 四指数对比 -->
+  <view class="section">
+    <view class="sec-title">📈 四大指数对比</view>
+    <view class="idx-table">
+      <view class="idx-head"><text class="c1">指数</text><text>当日相关</text><text>次日相关</text><text>方向命中</text><text>看多命中</text></view>
+      <view class="idx-row" wx:for="{{indices}}" wx:key="name">
+        <text class="c1">{{item.name}}</text>
+        <text class="purple">{{item.corrSame}}</text>
+        <text class="gray">{{item.corrNext}}</text>
+        <text class="{{item.hitRate >= 50 ? 'green' : 'orange'}}">{{item.hitRate}}</text>
+        <text class="{{item.bullRate >= 50 ? 'green' : 'orange'}}">{{item.bullRate}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 预判回测 -->
+  <view class="section">
+    <view class="sec-title">🧭 大盘预判回测 <text class="sub">{{btN}}次 · 基准≈54%</text></view>
+    <view class="bt-big"><text class="bt-rate {{btRate < 50 ? 'red' : 'green'}}">{{btRate}}</text><text class="bt-l">次日收盘命中率</text></view>
+    <view class="grid2">
+      <view class="gi"><text class="gi-v green">{{btBull}}</text><text class="gi-l">看涨命中</text></view>
+      <view class="gi"><text class="gi-v red">{{btBear}}</text><text class="gi-l">看跌命中</text></view>
+    </view>
+    <scroll-view scroll-y class="bt-scroll">
+      <view class="bt-row" wx:for="{{btRows}}" wx:key="date">
+        <text class="bt-date">{{item.date}}</text>
+        <text class="{{item.pred === '涨' ? 'green' : 'red'}}">{{item.pred === '涨' ? '▲看涨' : '▼看跌'}}</text>
+        <text class="{{item.pct >= 0 ? 'green' : 'red'}}">{{item.pct}}</text>
+        <text class="{{item.hit ? 'green' : 'red'}}">{{item.hit ? '✓命中' : '✗偏差'}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 最近作品 -->
+  <view class="section">
+    <view class="sec-title">🗂 最近作品</view>
+    <view class="yr-item" wx:for="{{articles}}" wx:key="date">
+      <text class="yr-date">{{item.date}}</text>
+      <text class="yr-title">{{item.title}}</text>
+      <text class="badge {{item.dir === '看多' ? 'badge-buy' : (item.dir === '看空' ? 'badge-sell' : 'badge-watch')}}">{{item.dir}}</text>
+    </view>
+  </view>
+
+  <view class="footer">情绪词典自动打标 · 仅供研究学习，不构成投资建议</view>
+  <view class="update-time">{{updateTime}}</view>
+</view>

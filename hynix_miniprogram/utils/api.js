@@ -22,6 +22,7 @@ module.exports = {
   getRealtimeSignal: () => request('/api/realtime/signal'),
   getBacktest: () => request('/api/backtest'),
   getReportData: () => request('/api/report/data'),
+  getYeren: () => request('/api/yeren'),
   getXnData: () => request('/api/xn'),
   getHynixData: () => request('/api/hynix'),
   setServerUrl: url => { app.globalData.serverUrl = url }

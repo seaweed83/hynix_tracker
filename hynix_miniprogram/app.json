@@ -3,6 +3,7 @@
     "pages/signal/signal",
     "pages/report/report",
     "pages/backtest/backtest",
+    "pages/yeren/yeren",
     "pages/settings/settings"
   ],
   "window": {

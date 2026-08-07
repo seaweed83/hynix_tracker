@@ -1,4 +1,13 @@
 <view class="page">
+  <!-- 野人哥入口 -->
+  <view class="yeren-entry" bindtap="goYeren">
+    <view>
+      <view class="yeren-title">🧠 野人哥情绪量化</view>
+      <view class="yeren-sub">179篇作品 × 四大指数关联度 · 大盘预判回测</view>
+    </view>
+    <text class="yeren-arrow">›</text>
+  </view>
+
   <!-- 顶部概览 -->
   <view class="overview-grid">
     <view class="ov-item"><text class="ov-l">香农芯创</text><text class="ov-v orange" id="xnPrice2">{{xnPrice}}</text></view>

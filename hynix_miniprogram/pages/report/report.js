@@ -8,6 +8,10 @@ Page({
     updateTime: '加载中...'
   },
 
+  goYeren() {
+    wx.navigateTo({ url: '/pages/yeren/yeren' })
+  },
+
   onLoad() {
     this.fetchData()
   },
