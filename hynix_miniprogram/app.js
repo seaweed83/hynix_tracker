@@ -1,6 +1,6 @@
 App({
   globalData: {
-    serverUrl: 'https://ought-aurora-shapes-fraser.trycloudflare.com',
+    serverUrl: 'https://puzzles-findarticles-volumes-how.trycloudflare.com',
     signalData: null,
     backtestData: null,
     refreshTimer: null

@@ -3,7 +3,7 @@ const api = require('../../utils/api')
 
 Page({
   data: {
-    serverUrl: 'https://ought-aurora-shapes-fraser.trycloudflare.com',
+    serverUrl: 'https://puzzles-findarticles-volumes-how.trycloudflare.com',
     status: ''
   },
 
