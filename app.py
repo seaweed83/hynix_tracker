@@ -2907,8 +2907,8 @@ def api_signals_history():
 @app.route('/api/yeren')
 def api_yeren():
     """野人哥完整分析API: 情绪面板 + 四指数对比 + 方向命中 + 预判回测"""
-    yeren_db = os.environ.get('YEREN_DB', os.path.expanduser(
-        '~/Documents/trae_projects/yeren_analysis/yeren.db'))
+    yeren_db = os.environ.get('YEREN_DB',
+                              os.path.join(os.path.dirname(__file__), 'yeren.db'))
     if not os.path.exists(yeren_db):
         return jsonify({"ok": False, "msg": "yeren.db not found"}), 404
     try:
